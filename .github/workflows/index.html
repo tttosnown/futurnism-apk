@@ -1,0 +1,241 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#f3f0f8">
+<title>Futurism</title><link rel="manifest" href="manifest.json"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="default"><meta name="mobile-web-app-capable" content="yes"><meta name="application-name" content="Futurism"><link rel="icon" href="icons/icon-192.png">
+<style>
+*{box-sizing:border-box}body{margin:0;background:#f3f0f8;color:#17151a;font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display","PingFang SC",sans-serif}
+button,input,textarea{font:inherit}button{border:0;background:none;color:inherit;cursor:pointer}
+.app{max-width:760px;margin:auto;min-height:100vh;padding-bottom:88px}
+header{padding:28px 22px 18px;display:flex;justify-content:space-between;align-items:center}
+.logo{font-size:27px;font-weight:650;letter-spacing:-.04em}.sub{font-size:12px;opacity:.45}
+.page{display:none;padding:0 18px}.page.active{display:block}
+.card{background:#fff;border-radius:24px;padding:22px;margin-bottom:14px;box-shadow:0 3px 18px #00000008}
+.label{font-size:11px;letter-spacing:.1em;text-transform:uppercase;opacity:.42;margin-bottom:12px}
+.date{font-size:13px;opacity:.5;margin-bottom:14px}
+.memory-title{font-size:23px;line-height:1.25;margin-bottom:16px}
+.memory-text{font-size:16px;line-height:1.7;white-space:pre-wrap}
+.photo{width:100%;border-radius:18px;display:block;margin:0 0 15px;max-height:420px;object-fit:cover}
+.empty{padding:48px 20px;text-align:center;opacity:.45}
+.today{margin-top:28px}.today textarea{width:100%;min-height:110px;border:0;outline:0;resize:vertical;background:#f7f5f9;border-radius:18px;padding:16px}
+.actions{display:flex;gap:10px;margin-top:12px}.pill{padding:11px 15px;border-radius:999px;background:#17151a;color:white;font-size:13px}.pill.light{background:#eeeaf1;color:#17151a}
+.bottom{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:min(760px,100%);padding:10px 18px calc(10px + env(safe-area-inset-bottom));background:#f3f0f8dd;backdrop-filter:blur(18px);display:flex;gap:8px}
+.nav{flex:1;padding:13px;border-radius:16px;font-size:14px}.nav.active{background:#17151a;color:white}
+.monthbar{display:flex;justify-content:space-between;align-items:center;margin:8px 3px 18px}.month{font-size:22px;font-weight:600}.arrow{width:40px;height:40px;border-radius:50%;background:#fff;font-size:22px}
+.week,.calendar{display:grid;grid-template-columns:repeat(7,1fr);gap:6px}.week div{text-align:center;font-size:10px;opacity:.35;padding-bottom:5px}.day{min-height:72px;background:#fff;border-radius:13px;padding:8px;position:relative;overflow:hidden}.day.other{opacity:.28}.daynum{font-size:11px;opacity:.5}.mark{position:absolute;right:7px;bottom:7px;width:7px;height:7px;border-radius:50%;background:#17151a}.thumb{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:.72}.day.hasphoto .daynum{position:relative;z-index:2;background:#fff;border-radius:8px;padding:2px 4px}
+.overlay{display:none;position:fixed;inset:0;background:#00000045;z-index:5;align-items:flex-end}.overlay.show{display:flex}.sheet{width:100%;max-width:760px;margin:auto;background:#fff;border-radius:28px 28px 0 0;padding:20px 18px calc(24px + env(safe-area-inset-bottom));max-height:88vh;overflow:auto}.sheethead{display:flex;justify-content:space-between;align-items:center;margin-bottom:18px}.close{font-size:25px;width:38px;height:38px;border-radius:50%;background:#f1eef3}.field{margin-bottom:12px}.field input,.field textarea{width:100%;border:0;background:#f6f4f7;border-radius:16px;padding:13px;outline:0}.field textarea{min-height:130px;resize:vertical}.preview{max-height:300px;width:100%;object-fit:cover;border-radius:18px;margin:8px 0}.record-list .card{padding:17px}.small-actions{display:flex;gap:8px;margin-top:12px}.small-actions button{font-size:12px;padding:8px 12px;border-radius:999px;background:#eeeaf1}.small-actions .danger{color:#a33}
+
+/* time atmosphere */
+body{transition:background 1.2s ease}
+body.time-morning{background:linear-gradient(135deg,#edf7fc 0%,#f7fbfd 50%,#eaf5fb 100%)}
+body.time-day{background:linear-gradient(135deg,#fff8ed 0%,#fffaf4 50%,#fff0dc 100%)}
+body.time-evening{background:linear-gradient(135deg,#fff1f3 0%,#fff8f8 50%,#fbecef 100%)}
+body.time-night{background:linear-gradient(135deg,#f4eef9 0%,#f8f4fb 50%,#eee8f5 100%)}
+body.time-late{background:linear-gradient(135deg,#f0f1f2 0%,#f7f7f7 50%,#e9eaec 100%)}
+.bottom{background:linear-gradient(to top,rgba(255,255,255,.78),rgba(255,255,255,.2));transition:background 1.2s ease}
+.iconbtn{width:38px;height:38px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;background:#eeecef;color:#111;padding:0}
+.iconbtn.dark{background:#111;color:#fff}
+.iconbtn svg{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.iconrow{display:flex;gap:8px;margin-top:12px}
+
+.more{width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;gap:3px;background:rgba(255,255,255,.62)}
+.more span{width:3px;height:3px;background:#111;border-radius:50%}
+.setting-row{display:flex;align-items:center;justify-content:space-between;padding:17px 4px;border-bottom:1px solid #eee;cursor:pointer}
+.setting-row:last-of-type{border-bottom:0}
+.setting-name{font-size:15px}.setting-desc{font-size:11px;opacity:.42;margin-top:4px}
+.setting-row>svg{width:21px;height:21px;stroke:#111;fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+</style>
+</head>
+<body>
+<div class="app">
+<header><div><div class="logo">Futurism</div><div class="sub">a little message from yourself</div></div>
+<button class="more" onclick="openSettings()" aria-label="设置" title="设置"><span></span><span></span><span></span></button></header>
+
+<main id="chance" class="page active">
+  <section id="memory"></section>
+  <section class="card today">
+    <div class="label">TODAY</div>
+    <div class="memory-title">今天，想留下一点什么？</div>
+    <textarea id="todayText" placeholder="写下一句话，或者留一张照片。"></textarea>
+    <div class="actions">
+      <button class="pill" onclick="saveToday()">留下</button>
+      <button class="pill light" onclick="openEditor()">添加照片</button>
+    </div>
+  </section>
+  <section id="recent" class="record-list"></section>
+</main>
+
+<main id="calendar" class="page">
+  <div class="monthbar"><button class="arrow" onclick="changeMonth(-1)">‹</button><div class="month" id="monthTitle"></div><button class="arrow" onclick="changeMonth(1)">›</button></div>
+  <div class="week"><div>一</div><div>二</div><div>三</div><div>四</div><div>五</div><div>六</div><div>日</div></div>
+  <div id="cal" class="calendar"></div>
+</main>
+</div>
+
+<nav class="bottom"><button class="nav active" id="navChance" onclick="showPage('chance')">偶然</button><button class="nav" id="navCalendar" onclick="showPage('calendar')">日历</button></nav>
+
+<div id="editor" class="overlay"><div class="sheet">
+  <div class="sheethead"><strong id="editorTitle">留下一件事</strong><button class="close" onclick="closeEditor()">×</button></div>
+  <div class="field"><input id="editDate" type="date"></div>
+  <div class="field"><textarea id="editText" placeholder="写点什么……"></textarea></div>
+  <img id="preview" class="preview" style="display:none">
+  <div class="actions"><button class="iconbtn" onclick="document.getElementById('photoInput').click()" aria-label="添加照片" title="添加照片"><svg viewBox="0 0 18 18"><rect x="3" y="3" width="12" height="12" rx="2"/><circle cx="6.5" cy="6.5" r="1.2"/><path d="m4.5 13 3.2-3.2 2.3-1.5 2 2.5"/></svg></button><button class="iconbtn dark" onclick="saveEditor()" aria-label="保存" title="保存"><svg viewBox="0 0 18 18"><path d="M4 3.5h8l2 2V15H4z"/><path d="M6.5 3.5v4h5v-4M6.5 15v-4h5v4"/></svg></button></div>
+  <input id="photoInput" type="file" accept="image/*" capture="environment" style="display:none" onchange="loadPhoto(event)">
+</div></div>
+
+<div id="viewer" class="overlay"><div class="sheet"><div class="sheethead"><strong id="viewDate"></strong><button class="close" onclick="closeViewer()">×</button></div><div id="viewContent"></div><div class="iconrow"><button class="iconbtn" onclick="editCurrent()" aria-label="编辑" title="编辑"><svg viewBox="0 0 18 18"><path d="M3.5 13.8V16h2.2L14.8 6.9l-2.2-2.2-9.1 9.1ZM11.5 6.2l2.2 2.2"/></svg></button><button class="iconbtn" onclick="deleteCurrent()" aria-label="删除" title="删除"><svg viewBox="0 0 18 18"><path d="M4 5h10M7 5V3.5h4V5M5 5l.7 10h6.6L13 5M7.5 8v4.5M10.5 8v4.5"/></svg></button></div></div></div>
+
+
+<div id="settings" class="overlay"><div class="sheet">
+  <div class="sheethead"><strong>设置</strong><button class="close" onclick="closeSettings()">×</button></div>
+  <div class="setting-row" onclick="exportData()">
+    <div><div class="setting-name">导出日志</div><div class="setting-desc">把所有记录保存为备份文件</div></div>
+    <svg viewBox="0 0 24 24"><path d="M12 3v11M7.5 9.5 12 14l4.5-4.5M5 17v3h14v-3"/></svg>
+  </div>
+  <div class="setting-row" onclick="document.getElementById('importInput').click()">
+    <div><div class="setting-name">导入日志</div><div class="setting-desc">从备份文件恢复记录</div></div>
+    <svg viewBox="0 0 24 24"><path d="M12 15V4M7.5 8.5 12 4l4.5 4.5M5 17v3h14v-3"/></svg>
+  </div>
+  <div class="setting-row" onclick="installApp()">
+    <div><div class="setting-name">添加到桌面</div><div class="setting-desc">像独立 App 一样使用 Futurism</div></div>
+    <svg viewBox="0 0 24 24"><rect x="5" y="3" width="14" height="18" rx="2"/><path d="M9 7h6M10 17h4"/></svg>
+  </div>
+  <input id="importInput" type="file" accept=".json,application/json" style="display:none" onchange="importData(event)">
+</div></div>
+<script>
+const KEY='futurism-records-v2';
+let records=JSON.parse(localStorage.getItem(KEY)||'[]');
+let currentMonth=new Date(); currentMonth.setDate(1);
+let editingId=null, viewingId=null, tempPhoto='';
+
+function persist(){localStorage.setItem(KEY,JSON.stringify(records));}
+function todayISO(){return new Date().toISOString().slice(0,10)}
+function setTimeTheme(){
+ const h=new Date().getHours();
+ document.body.classList.remove('time-morning','time-day','time-evening','time-night','time-late');
+ document.body.classList.add(h>=6&&h<10?'time-morning':h>=10&&h<16?'time-day':h>=16&&h<20?'time-evening':h>=20&&h<24?'time-night':'time-late');
+}
+function fmt(d){return d.replaceAll('-','.')}
+function showPage(id){
+ document.querySelectorAll('.page').forEach(x=>x.classList.remove('active'));
+ document.getElementById(id).classList.add('active');
+ document.querySelectorAll('.nav').forEach(x=>x.classList.remove('active'));
+ document.getElementById(id==='chance'?'navChance':'navCalendar').classList.add('active');
+ if(id==='calendar') renderCalendar(); else renderChance();
+}
+function renderChance(){
+ const box=document.getElementById('memory');
+ const past=records.filter(r=>r.date<todayISO());
+ if(!past.length){box.innerHTML='<div class="card empty">还没有来自过去的消息。<br>先留下一点，未来再偶然遇见。</div>'}
+ else{
+   const r=past[Math.floor(Math.random()*past.length)];
+   box.innerHTML='<div class="card"><div class="label">FROM</div><div class="date">'+fmt(r.date)+'</div>'+
+   (r.photo?'<img class="photo" src="'+r.photo+'">':'')+
+   (r.text?'<div class="memory-text">'+esc(r.text)+'</div>':'')+
+   '<div class="small-actions"><button onclick="openViewer(\''+r.id+'\')">查看</button></div></div>';
+ }
+ const recent=document.getElementById('recent');
+ const rs=[...records].sort((a,b)=>b.date.localeCompare(a.date)).slice(0,6);
+ recent.innerHTML=rs.length?'<div class="label" style="margin:25px 4px 10px">RECENT</div>'+rs.map(r=>'<div class="card"><div class="date">'+fmt(r.date)+'</div>'+(r.photo?'<img class="photo" src="'+r.photo+'">':'')+(r.text?'<div class="memory-text">'+esc(r.text)+'</div>':'')+'<div class="small-actions"><button onclick="openViewer(\''+r.id+'\')">查看</button></div></div>').join(''):'';
+}
+function renderCalendar(){
+ const y=currentMonth.getFullYear(),m=currentMonth.getMonth();
+ document.getElementById('monthTitle').textContent=y+' · '+String(m+1).padStart(2,'0');
+ const first=new Date(y,m,1), start=(first.getDay()+6)%7;
+ const days=new Date(y,m+1,0).getDate();
+ let html='';
+ for(let i=0;i<start;i++){let d=new Date(y,m,i-start+1);html+='<div class="day other"><div class="daynum">'+d.getDate()+'</div></div>'}
+ for(let n=1;n<=days;n++){
+   const iso=y+'-'+String(m+1).padStart(2,'0')+'-'+String(n).padStart(2,'0');
+   const rs=records.filter(r=>r.date===iso); const r=rs.find(x=>x.photo);
+   html+='<button class="day '+(r?'hasphoto':'')+'" onclick="openDay(\''+iso+'\')">'+(r?'<img class="thumb" src="'+r.photo+'">':'')+'<div class="daynum">'+n+'</div>'+(rs.length?'<i class="mark"></i>':'')+'</button>';
+ }
+ document.getElementById('cal').innerHTML=html;
+}
+function changeMonth(n){currentMonth.setMonth(currentMonth.getMonth()+n);renderCalendar()}
+function openDay(date){
+ const rs=records.filter(r=>r.date===date);
+ if(rs.length===1) openViewer(rs[0].id);
+ else if(rs.length>1){
+   document.getElementById('viewDate').textContent=fmt(date);
+   document.getElementById('viewContent').innerHTML=rs.map(r=>(r.photo?'<img class="photo" src="'+r.photo+'">':'')+(r.text?'<div class="memory-text">'+esc(r.text)+'</div>':'')+'<hr style="border:0;border-top:1px solid #eee;margin:18px 0">').join('');
+   viewingId=null;document.getElementById('viewer').classList.add('show');
+ } else openEditor(date);
+}
+function openEditor(date=todayISO(),id=null){
+ editingId=id; tempPhoto='';
+ document.getElementById('editorTitle').textContent=id?'编辑记录':'留下一件事';
+ document.getElementById('editDate').value=date;
+ const r=id?records.find(x=>x.id===id):null;
+ document.getElementById('editText').value=r?.text||'';
+ if(r?.photo){tempPhoto=r.photo;showPreview(r.photo)}else{document.getElementById('preview').style.display='none'}
+ document.getElementById('editor').classList.add('show');
+}
+function closeEditor(){document.getElementById('editor').classList.remove('show')}
+function loadPhoto(e){const f=e.target.files[0];if(!f)return;const rd=new FileReader();rd.onload=()=>{tempPhoto=rd.result;showPreview(tempPhoto)};rd.readAsDataURL(f)}
+function showPreview(src){const p=document.getElementById('preview');p.src=src;p.style.display='block'}
+function saveEditor(){
+ const text=document.getElementById('editText').value.trim(),date=document.getElementById('editDate').value;
+ if(!date||( !text&&!tempPhoto)){alert('至少留下文字或照片');return}
+ if(editingId){const r=records.find(x=>x.id===editingId);r.date=date;r.text=text;r.photo=tempPhoto}
+ else records.push({id:crypto.randomUUID(),date,text,photo:tempPhoto});
+ persist();closeEditor();renderChance();renderCalendar();
+}
+function saveToday(){
+ const text=document.getElementById('todayText').value.trim();
+ if(!text){openEditor();return}
+ records.push({id:crypto.randomUUID(),date:todayISO(),text,photo:''});persist();
+ document.getElementById('todayText').value='';renderChance();renderCalendar();
+}
+function openViewer(id){
+ viewingId=id;const r=records.find(x=>x.id===id);if(!r)return;
+ document.getElementById('viewDate').textContent=fmt(r.date);
+ document.getElementById('viewContent').innerHTML=(r.photo?'<img class="photo" src="'+r.photo+'">':'')+(r.text?'<div class="memory-text">'+esc(r.text)+'</div>':'');
+ document.getElementById('viewer').classList.add('show');
+}
+function closeViewer(){document.getElementById('viewer').classList.remove('show')}
+function editCurrent(){if(!viewingId)return;closeViewer();openEditor('',viewingId)}
+function deleteCurrent(){if(!viewingId)return;if(confirm('确定删除这条记录吗？')){records=records.filter(r=>r.id!==viewingId);persist();closeViewer();renderChance();renderCalendar()}}
+function esc(s){return s.replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+renderChance(); setTimeTheme(); setInterval(setTimeTheme,60000); if("serviceWorker" in navigator) navigator.serviceWorker.register("./sw.js");
+
+let deferredInstallPrompt=null;
+window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();deferredInstallPrompt=e});
+function openSettings(){document.getElementById('settings').classList.add('show')}
+function closeSettings(){document.getElementById('settings').classList.remove('show')}
+function exportData(){
+ const payload={app:'Futurism',version:2,exportedAt:new Date().toISOString(),records};
+ const blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'});
+ const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='Futurism-日志备份-'+todayISO()+'.json';a.click();
+ setTimeout(()=>URL.revokeObjectURL(a.href),1000);
+}
+function importData(e){
+ const f=e.target.files[0]; if(!f)return;
+ const rd=new FileReader();
+ rd.onload=()=>{
+  try{
+   const data=JSON.parse(rd.result);
+   const incoming=Array.isArray(data)?data:data.records;
+   if(!Array.isArray(incoming))throw new Error();
+   const clean=incoming.filter(r=>r&&r.id&&r.date).map(r=>({id:String(r.id),date:String(r.date),text:String(r.text||''),photo:String(r.photo||'')}));
+   if(!confirm('导入将与现有记录合并，重复记录会覆盖。继续吗？'))return;
+   const map=new Map(records.map(r=>[r.id,r])); clean.forEach(r=>map.set(r.id,r)); records=[...map.values()];
+   persist();renderChance();renderCalendar();closeSettings();alert('导入完成');
+  }catch(err){alert('备份文件无法读取')}
+  e.target.value='';
+ };
+ rd.readAsText(f);
+}
+async function installApp(){
+ if(deferredInstallPrompt){
+   deferredInstallPrompt.prompt();
+   await deferredInstallPrompt.userChoice;
+   deferredInstallPrompt=null;
+ }else{
+   alert('在 Android Chrome 中，请打开浏览器菜单 ⋮，选择“安装应用”或“添加到主屏幕”。如果已经安装，则无需重复操作。');
+ }
+}
+</script>
+</body></html>
