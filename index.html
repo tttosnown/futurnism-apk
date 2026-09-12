@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>名词解释刷题工具</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+body{
+    font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;
+    max-width:760px;
+    margin:20px auto;
+    padding:0 16px;
+    background:#f7f8fa;
+}
+.tab-bar{
+    display:flex;
+    gap:8px;
+    margin-bottom:20px;
+}
+.tab-btn{
+    flex:1;
+    padding:12px;
+    border:none;
+    border-radius:10px;
+    font-size:16px;
+    cursor:pointer;
+    background:#ddd;
+}
+.tab-btn.active{
+    background:#6366f1;
+    color:#fff;
+}
+.view{
+    display:none;
+}
+.view.active{
+    display:block;
+}
+
+/* 刷题模式样式 */
+.card{
+    background:#fff;
+    padding:28px 22px;
+    border-radius:14px;
+    box-shadow:0 1px 6px #00000015;
+    margin-bottom:24px;
+}
+.question{
+    font-size:18px;
+    font-weight:bold;
+    line-height:1.6;
+    margin-bottom:20px;
+}
+.answer{
+    font-size:15.5px;
+    line-height:1.7;
+    color:#222;
+    background:#f3f4f6;
+    padding:16px;
+    border-radius:10px;
+    display:none;
+    white-space:pre-wrap;
+}
+.btn-wrap{
+    display:flex;
+    gap:10px;
+    flex-wrap:wrap;
+}
+button{
+    flex:1;
+    min-width:100px;
+    padding:13px;
+    border:none;
+    border-radius:10px;
+    font-size:15px;
+    cursor:pointer;
+}
+.btn-show{background:#6366f1;color:white;}
+.btn-prev{background:#9ca3af;color:white;}
+.btn-next{background:#2563eb;color:white;}
+.index-text{
+    text-align:center;
+    margin-bottom:16px;
+    color:#666;
+}
+
+/* 卡片检索模式 */
+.search-input{
+    width:100%;
+    padding:12px 14px;
+    border:1px solid #ccc;
+    border-radius:10px;
+    font-size:16px;
+    margin-bottom:16px;
+}
+.card-item{
+    background:#fff;
+    border-radius:12px;
+    padding:16px;
+    margin-bottom:12px;
+    box-shadow:0 1px 4px #00000012;
+}
+.card-item-title{
+    font-weight:bold;
+    font-size:17px;
+    margin-bottom:8px;
+    cursor:pointer;
+    user-select:none;
+}
+.card-item-ans{
+    font-size:15px;
+    line-height:1.65;
+    color:#333;
+    padding-top:8px;
+    border-top:1px solid #eee;
+    display:none;
+}
+</style>
+</head>
+<body>
+
+<div class="tab-bar">
+    <button class="tab-btn active" data-view="studyView">顺序刷题模式</button>
+    <button class="tab-btn" data-view="cardView">卡片检索模式</button>
+</div>
+
+<!-- 模式1：顺序刷题 -->
+<div id="studyView" class="view active">
+    <div class="index-text">
+        <span id="pageInfo"></span>
+    </div>
+    <div class="card">
+        <div class="question" id="qText"></div>
+        <div class="answer" id="aText"></div>
+    </div>
+    <div class="btn-wrap">
+        <button class="btn-prev" id="prevBtn">上一题</button>
+        <button class="btn-show" id="showBtn">显示/隐藏答案</button>
+        <button class="btn-next" id="nextBtn">下一题</button>
+    </div>
+</div>
+
+<!-- 模式2：卡片检索（可搜索，点击展开答案） -->
+<div id="cardView" class="view">
+    <input class="search-input" id="searchInput" placeholder="🔍输入名词快速搜索，例如：营造法式">
+    <div id="cardList"></div>
+</div>
+
+
+<script>
+//题库
+let questionBank = [
+{"q":"鲁班","a":"春秋时期建筑工匠。姓公输,名般,鲁国人。被中国建筑工匠尊为“祖师”。"},
+{"q":"伍子胥","a":"春秋末期楚国人,为吴王阖闾相土尝水,营阖闾城。"},
+{"q":"李冰父子","a":"战国时代著名的水利工程专家。主持都江堰排灌水工程。其指导思想是道家的“道法自然”、“天人合一”的思想。"},
+{"q":"阳城延","a":"西汉哲匠。先后主持建造长乐宫、未央宫、长安城等项目。"},
+{"q":"杨衒之","a":"北魏散文家。著《洛阳伽蓝记》一书,记录洛阳及城郊诸大寺园林建寺缘由、兴衰梗概、建筑结构,还记载了人文地理、风俗习惯、传闻掌故。"},
+{"q":"宇文恺","a":"隋代城市规划和建筑工程的专家,营随新都大兴城、东都洛阳城、仁寿宫等。大兴城的规划是古代城市建设史上最有代表性的成功范例之一。还用1:100比例制作“明堂”的图样和木模型。"},
+{"q":"李春","a":"隋代著名工匠,技艺高超,代表作是位于河北赵县的安济桥。该桥是一座敞肩拱桥,以它的结构和外形的完美融合而闻名。"},
+{"q":"喻皓","a":"北宋都料匠,总结前人和自己经验编著《木经》。我国第一部木结构建筑手册。"},
+{"q":"李诫","a":"北宋著名建筑学家,编写了《营造法式》,是我国古代最完整的建筑技术书籍。"},
+{"q":"样式雷","a":"在清代宫廷建筑设计机构“样式房”供役时间最长的雷氏家族,参与建造了清朝许多皇家建筑。人称“样式雷”。"},
+{"q":"计成","a":"字无否,号无否道人,明末造园家,著有造园著作《园冶》,是我国首部完整的造园理论著述。提出“虽由人作,宛自天开”的审美标准。"},
+{"q":"朱启钤","a":"中国政治家、实业家、古建筑学家。建立了最早的研究中国建筑文化遗产的学术团体中国营造学社。"},
+{"q":"梁思成","a":"近现代建筑史学家,营造学社法式部主任,创办东北大学、清华建筑系,著《清式营造则例》《中国建筑史》。参与国徽、人民英雄纪念碑设计。"},
+{"q":"刘敦桢","a":"近现代建筑史学家,营造学社文献部主任,中国古建筑研究开拓者。"},
+{"q":"杨廷宝","a":"近现代建筑设计开拓者,代表作北京和平宾馆、国民党党史陈列馆。"},
+{"q":"吕彦直","a":"民国建筑师,代表作南京中山陵、广州中山纪念堂。"},
+{"q":"王澍","a":"普利兹克奖得主,代表作中国美术学院象山校区、宁波美术馆。"},
+{"q":"刘家琨","a":"建筑师,提出低技策略,代表作西村大院、鹿野苑石刻博物馆。"},
+{"q":"张永和","a":"非常建筑主持建筑师,注重建筑原型设计,代表作垂直玻璃住宅。"},
+{"q":"《考工记》","a":"战国成书，我国古代城市规划著作，匠人营国，方九里，旁三门。左祖右社，面朝后市。中国最早都城规划学说。"},
+{"q":"《木经》","a":"北宋喻皓著，我国历史上第一部木结构建筑手册。"},
+{"q":"《营造法式》","a":"北宋李诫编修，王安石改革产物，宋代官式建筑技术典籍，确立材份模数制度，附图样。"},
+{"q":"《园冶》","a":"明末计成，我国第一部完整造园理论著作，核心：虽由人作，宛自天开。"},
+{"q":"《工程做法则例》","a":"清雍正颁布，清代官式建筑标准，确立斗口模数。"},
+{"q":"《清式营造则例》","a":"梁思成著作，系统梳理清代官式建筑。"},
+{"q":"大木作","a":"木构架建筑主体部分，由柱、梁、枋、檩组成，决定建筑尺度形体。"},
+{"q":"小木作","a":"又称装修，分外檐装修、内檐装修，门窗、隔断、罩、藻井天花等。"},
+{"q":"斗拱（铺作）","a":"中国木构特有构件，斗、拱、昂组合；传递屋顶荷载到柱子；等级象征，尺度模数。宋称铺作。"},
+{"q":"偷心造","a":"宋斗拱跳头上不置横拱。"},
+{"q":"计心造","a":"宋斗拱跳头上安放横拱。"},
+{"q":"叉柱造","a":"上下层柱交接，上层柱底十字开口，插入下层斗拱，向内退半柱径，实例独乐寺观音阁。"},
+{"q":"缠柱造","a":"下层柱增设斜梁承托上层柱，转角增设补间铺作。"},
+{"q":"举折","a":"宋代屋顶坡度做法，先定脊高度，自上而下逐架折，形成屋面曲线。"},
+{"q":"举架","a":"清代屋顶做法，自下而上，坡度逐渐变陡。"},
+{"q":"生起","a":"宋辽檐柱由当心间向两端柱子升高，檐口呈柔和曲线。"},
+{"q":"侧脚","a":"一圈檐柱柱脚外撇，柱头向内收，增加构架内聚力，明代后少用。"},
+{"q":"卷杀","a":"木构件端部切削成柔和曲线轮廓，用于拱、梁、柱。"},
+{"q":"推山","a":"庑殿屋顶做法，正脊向两端推出，垂脊变为柔和曲线。"},
+{"q":"收山","a":"歇山顶山花从檐柱中线向内收进，减小屋顶体量。"},
+{"q":"彻上明造","a":"不设天花，梁架全部暴露。厅堂型建筑常用。"},
+{"q":"副阶周匝","a":"殿身、塔身外围环绕一圈外廊，实例应县木塔，晋祠圣母殿。"},
+{"q":"金厢斗底槽","a":"宋殿阁柱网，内外两圈柱子，外层包围内层，实例佛光寺大殿。"},
+{"q":"分心斗底槽","a":"一列中柱把建筑分为前后两部分，多用于门殿，独乐寺山门。"},
+{"q":"单槽","a":"内柱划分平面为大小不等两区，晋祠圣母殿。"},
+{"q":"双槽","a":"内柱将平面划分为大小不等三区。"},
+{"q":"抬梁式","a":"叠梁式，柱上架梁，梁上短柱再承梁，室内少柱，官式北方多用，耗材大。"},
+{"q":"穿斗式","a":"枋串联柱子，檩直接搁柱头，柱密，抗风好，南方民居多用。"},
+{"q":"干阑式","a":"底层架空，上层住人，防潮防虫兽，南方少数民族。"},
+{"q":"井干式","a":"木材层层相叠，既是围护又是承重。"},
+{"q":"庑殿顶（四阿顶）","a":"最高等级屋顶，四面坡，五条脊，重檐庑殿等级最高。实例佛光寺大殿。"},
+{"q":"歇山顶（九脊殿）","a":"等级第二，正脊+四垂脊+四戗脊。"},
+{"q":"悬山顶","a":"两坡顶，屋檐伸出山墙外保护山墙防水。"},
+{"q":"硬山顶","a":"两坡，屋面不伸出山墙。"},
+{"q":"攒尖顶","a":"无正脊，垂脊汇聚顶部宝顶，亭、塔多用。"},
+{"q":"盔顶","a":"无正脊，垂脊上凸下凹，轮廓似头盔。"},
+{"q":"盝顶","a":"四条正脊围成平顶，下接庑殿。"},
+{"q":"和玺彩画","a":"清彩画最高等级，龙凤题材，大量贴金，用于主殿。"},
+{"q":"旋子彩画","a":"等级第二，旋花瓣，官衙庙宇次殿。"},
+{"q":"苏式彩画","a":"等级最低，园林民居，山水花鸟故事，少用金。"},
+{"q":"须弥座","a":"高级台基，多层砖石叠砌，宫殿坛庙。"},
+{"q":"藻井","a":"室内顶棚向上凹进的井状装饰，宫殿庙宇重要位置。"},
+{"q":"抱厦","a":"主体建筑侧面突出的小房间，丁字相交。"},
+{"q":"雀替","a":"梁枋与柱相交的短木，减小梁净跨，也可装饰。花牙子为纯装饰雀替。"},
+{"q":"驼峰","a":"彻上明造梁架，承托梁袱，似骆驼脊背。"},
+{"q":"影壁（照壁、萧墙）","a":"四合院大门内外，遮挡视线，烘托气势。"},
+{"q":"垂花门","a":"四合院二门，檐柱不落地，屋顶勾连搭。"},
+{"q":"宝城宝顶","a":"明清帝陵，地宫之上圆形土丘宝顶，外围城墙宝城。明孝陵首创。"},
+{"q":"方上","a":"汉代帝陵封土，截顶方锥形夯土堆，茂陵。"},
+{"q":"黄肠题凑","a":"汉代帝王陵，柏木段垒墓室，木头端头向内。"},
+{"q":"兆域图","a":"战国中山王墓出土，世界现存最早总平面墓图。"},
+{"q":"明楼","a":"明代陵墓独创，陵前高楼，碑亭。"},
+{"q":"五音姓利","a":"宋代堪舆，赵属角音，墓地东南高西北低，宋陵南高北低。"},
+{"q":"舍宅为寺","a":"南北朝风尚，贵族捐住宅作佛寺，前厅为佛殿后堂讲堂。"},
+{"q":"佛光寺大殿","a":"唐大中十一年，五台山，现存最大唐代木构，金厢斗底槽，斗拱宏大，出檐深远。"},
+{"q":"南禅寺大殿","a":"山西五台山，我国现存最早完整唐代木构。"},
+{"q":"应县佛宫寺释迦塔","a":"辽代，国内现存最古老完整木塔；明五暗四八角，金厢斗底槽，叉柱造。"},
+{"q":"嵩岳寺塔","a":"北魏，河南登封，我国现存最早砖塔，十二边形密檐塔。"},
+{"q":"乾陵","a":"唐高宗武则天合葬，唐代依山为陵代表，利用双峰做阙。"},
+{"q":"十三陵","a":"明代帝王陵墓群，北京天寿山；共用一条神道，以长陵为中心。"},
+{"q":"唐长安城","a":"里坊制典范，棋盘格局，东西两市，宵禁。"},
+{"q":"宋东京（开封）","a":"取消里坊围墙，开放街巷制，夜市，瓦肆。"},
+{"q":"元大都","a":"刘秉忠规划，棋盘格局，郭守敬通惠河。"},
+{"q":"明清北京城","a":"完整体现考工记思想，7.5km中轴线，左祖右社，前朝后寝。"},
+{"q":"左祖右社","a":"考工记，都城东侧太庙祭祖，西侧社稷坛祭土地五谷。"},
+{"q":"里坊制","a":"古代城市管理模式，封闭坊墙，定时开闭，宵禁，唐长安典型。"},
+{"q":"四合院","a":"北京传统民居，中轴对称，入口东南角，倒座、垂花门、正房厢房。"},
+{"q":"福建土楼","a":"客家民居，夯土厚墙，祠堂为中心，圆楼方楼。"},
+{"q":"虽由人作，宛自天开","a":"计成《园冶》，中国古典园林核心审美，人工营造宛若天然。"},
+{"q":"借景","a":"古典造园手法，将园外景色引入视线，扩大空间层次。"},
+{"q":"TOD模式","a":"以公共交通为导向开发，最大化公交使用。"},
+{"q":"TND模式","a":"传统邻里开发，5分钟步行邻里单元。"},
+{"q":"SOD模式","a":"社会服务设施引导开发，行政公共设施带动新区地价。"},
+{"q":"CBD","a":"中央商务区，城市金融商务高度集中区域。"},
+{"q":"景观都市主义","a":"把城市视作生态体系，景观基础设施作为自然人文过程载体。"},
+{"q":"广义建筑学","a":"吴良镛提出，整合建筑、地景、城市规划，面向人居环境。"},
+{"q":"人居环境科学","a":"吴良镛，综合多学科研究人类聚居。"},
+{"q":"北京宪章","a":"1999世界建筑师大会，吴良镛起草，21世纪建筑学纲领。"},
+{"q":"场所精神","a":"场所整体气氛，人与环境关系，空间承载文化记忆。"},
+{"q":"图底关系","a":"格式塔心理学，实体建筑为图，开敞空间为底。"},
+{"q":"认知地图","a":"凯文林奇，城市意向五要素：道路、边界、区域、节点、标志物。"},
+{"q":"D/H","a":"街道宽度与建筑高度比值，D/H=1匀称；>1疏离；<1压迫。"},
+{"q":"城市更新","a":"有计划改造衰败旧城区，改善环境。"},
+{"q":"棕地","a":"存在潜在污染的场地，需要修复再开发。"},
+{"q":"海绵城市","a":"水弹性城市，提升城市应对雨水洪涝的弹性。"},
+{"q":"格式塔","a":"完形心理学，整体大于局部之和。"},
+{"q":"城市设计导则","a":"规范化可操作的城市设计控制纲要。"},
+{"q":"开放空间","a":"城市公共外部空间，广场绿地公园，可开放中庭。"},
+{"q":"文脉","a":"历史文化传统，通过物质空间转译。"},
+{"q":"希波丹姆模式","a":"古希腊方格网城市，广场为中心，米列都城。"},
+{"q":"营寨城","a":"古罗马被征服城市，方正十字街道，军事防御。"},
+{"q":"《建筑十书》","a":"维特鲁威，古罗马，提出建筑三要素：实用、坚固、美观。"},
+{"q":"帆拱","a":"拜占庭结构，方形平面过渡圆形穹顶。圣索菲亚大教堂。"},
+{"q":"飞扶壁","a":"哥特建筑，平衡拱顶侧推力，凌空半拱。"},
+{"q":"骨架券","a":"哥特拱顶，拱承重，填充部分减重。"},
+{"q":"巴西利卡","a":"古罗马公共大厅，中厅高侧廊低，基督教教堂原型。"},
+{"q":"拉丁十字平面","a":"教堂，纵向长，祭坛在端头。"},
+{"q":"希腊十字平面","a":"四臂等长，集中式教堂。"},
+{"q":"帕拉第奥母题","a":"帕拉迪奥，大开间内套小券拱，大小柱组合。"},
+{"q":"券柱式","a":"古罗马，拱券+装饰性壁柱，柱不承重。"},
+{"q":"CIAM国际现代建筑协会","a":"现代建筑组织，出台雅典宪章，后期解散。"},
+{"q":"雅典宪章","a":"1933，四大功能：居住、工作、游憩、交通，功能分区。"},
+{"q":"田园城市","a":"霍华德，城乡结合理想城市。"},
+{"q":"新建筑五点","a":"柯布西耶：底层架空、自由平面、自由立面、横向长窗、屋顶花园。"},
+{"q":"少就是多","a":"密斯凡德罗，简约，重视构造细部。"},
+{"q":"装饰就是罪恶","a":"阿道夫路斯，反对多余装饰。"},
+{"q":"粗野主义","a":"柯布西耶，暴露粗糙混凝土模板痕迹，马赛公寓。"},
+{"q":"高技派","a":"暴露结构设备，蓬皮杜中心。"},
+{"q":"场所理论","a":"空间赋予人文意义转化为场所。"},
+{"q":"连接理论","a":"现代城市设计三大理论之一，注重空间联系。"},
+{"q":"城市肌理","a":"城市物质形体特征，街区建筑尺度组合。"},
+{"q":"城市再生","a":"城市新陈代谢，协调新旧保护发展。"},
+{"q":"GIS地理信息系统","a":"地理数据采集存储分析可视化。"},
+{"q":"建筑类型学","a":"追溯建筑原型，类型演绎设计。"},
+{"q":"天际线","a":"建筑以天空为背景的轮廓剪影。"},
+{"q":"城市建筑综合体","a":"多种城市功能组合，互相依存。"},
+{"q":"紧凑城市","a":"适度高密度，优先公共交通，集约利用土地。"}
+];
+
+// --------标签切换逻辑
+const tabBtns = document.querySelectorAll('.tab-btn');
+const views = document.querySelectorAll('.view');
+tabBtns.forEach(btn=>{
+    btn.onclick = function(){
+        const targetId = this.getAttribute('data-view');
+        tabBtns.forEach(b=>b.classList.remove('active'));
+        this.classList.add('active');
+        views.forEach(v=>v.classList.remove('active'));
+        document.getElementById(targetId).classList.add('active');
+    }
+})
+
+// --------刷题模式逻辑
+let current = 0;
+const qDom = document.getElementById('qText');
+const aDom = document.getElementById('aText');
+const pageDom = document.getElementById('pageInfo');
+
+function renderStudy(){
+    let item = questionBank[current];
+    qDom.innerText = item.q;
+    aDom.innerText = item.a;
+    aDom.style.display = 'none';
+    pageDom.innerText = `${current+1} / ${questionBank.length}`;
+}
+
+document.getElementById('showBtn').onclick = function(){
+    aDom.style.display = aDom.style.display === 'block' ? 'none' : 'block';
+}
+document.getElementById('nextBtn').onclick = function(){
+    if(current < questionBank.length -1) current++;
+    renderStudy();
+}
+document.getElementById('prevBtn').onclick = function(){
+    if(current > 0) current--;
+    renderStudy();
+}
+renderStudy();
+
+
+// --------卡片检索模式逻辑
+const cardList = document.getElementById('cardList');
+const searchInput = document.getElementById('searchInput');
+
+function renderCardList(list){
+    cardList.innerHTML = '';
+    list.forEach((obj,idx)=>{
+        const div = document.createElement('div');
+        div.className = 'card-item';
+        div.innerHTML = `
+            <div class="card-item-title" data-idx="${idx}">📖 ${obj.q}</div>
+            <div class="card-item-ans">${obj.a}</div>
+        `;
+        const titleDom = div.querySelector('.card-item-title');
+        const ansDom = div.querySelector('.card-item-ans');
+        titleDom.onclick = ()=>{
+            ansDom.style.display = ansDom.style.display === 'block' ? 'none' : 'block';
+        }
+        cardList.appendChild(div);
+    })
+}
+
+//搜索过滤
+searchInput.oninput = function(){
+    let kw = this.value.trim().toLowerCase();
+    if(!kw){
+        renderCardList(questionBank);
+        return;
+    }
+    let filter = questionBank.filter(x=> x.q.toLowerCase().includes(kw) || x.a.toLowerCase().includes(kw));
+    renderCardList(filter);
+}
+//初始化渲染全部卡片
+renderCardList(questionBank);
+
+</script>
+</body>
+</html>
