@@ -55,7 +55,7 @@ jobs:
           # Bundle the segmentation model into the APK. The app never downloads a model
           # from Google Play services at runtime.
           curl -L --fail --retry 3 \
-            "https://tfhub.dev/tensorflow/lite-model/deeplabv3/1/metadata/2?lite-format=tflite" \
+            "https://storage.googleapis.com/mediapipe-models/image_segmenter/deeplab_v3/float32/1/deeplab_v3.tflite" \
             -o android-build/app/src/main/assets/deeplabv3.tflite
 
           cp index.html android-build/app/src/main/assets/index.html
@@ -639,7 +639,7 @@ jobs:
 
           dependencies {
               implementation 'androidx.core:core:1.15.0'
-              implementation 'com.google.mediapipe:tasks-vision:0.10.22'
+              implementation 'com.google.mediapipe:tasks-vision:0.10.32'
           }
           '''
 
