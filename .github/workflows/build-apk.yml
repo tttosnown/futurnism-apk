@@ -123,8 +123,8 @@ jobs:
                   applicationId 'com.futurism.app'
                   minSdk 24
                   targetSdk 35
-                  versionCode 21
-                  versionName '19.15'
+                  versionCode 22
+                  versionName '19.16'
               }
           }
           EOF
@@ -244,6 +244,7 @@ jobs:
           import com.google.mlkit.vision.segmentation.subject.SubjectSegmentationResult;
           import com.google.mlkit.vision.segmentation.subject.SubjectSegmenter;
           import com.google.mlkit.vision.segmentation.subject.SubjectSegmenterOptions;
+          import com.google.mlkit.vision.segmentation.subject.Subject;
           import com.google.android.gms.common.moduleinstall.ModuleInstall;
           import com.google.android.gms.common.moduleinstall.ModuleInstallRequest;
 
@@ -370,9 +371,15 @@ jobs:
                       }
                   });
 
+                  SubjectSegmenterOptions.SubjectResultOptions subjectResultOptions =
+                          new SubjectSegmenterOptions.SubjectResultOptions.Builder()
+                                  .enableSubjectBitmap()
+                                  .build();
                   SubjectSegmenterOptions options =
                           new SubjectSegmenterOptions.Builder()
                                   .enableForegroundBitmap()
+                                  .enableForegroundConfidenceMask()
+                                  .enableMultipleSubjects(subjectResultOptions)
                                   .build();
                   subjectSegmenter = SubjectSegmentation.getClient(options);
 
@@ -540,7 +547,34 @@ jobs:
                                       subjectSegmenter.process(image)
                                   .addOnSuccessListener(result -> {
                                       try {
-                                          Bitmap foreground = result.getForegroundBitmap();
+                                          Bitmap foreground = null;
+
+                                          // Prefer the largest individual subject. This is more
+                                          // reliable for a single main object (for example a cat)
+                                          // and avoids keeping unrelated foreground objects.
+                                          try {
+                                              java.util.List<Subject> subjects = result.getSubjects();
+                                              if (subjects != null && !subjects.isEmpty()) {
+                                                  Subject best = null;
+                                                  long bestArea = -1;
+                                                  for (Subject subject : subjects) {
+                                                      if (subject == null) continue;
+                                                      long area = (long) subject.getWidth() * (long) subject.getHeight();
+                                                      if (area > bestArea && subject.getBitmap() != null) {
+                                                          bestArea = area;
+                                                          best = subject;
+                                                      }
+                                                  }
+                                                  if (best != null) foreground = best.getBitmap();
+                                              }
+                                          } catch (Exception ignored) {
+                                              // Fall back to the combined foreground below.
+                                          }
+
+                                          if (foreground == null) {
+                                              foreground = result.getForegroundBitmap();
+                                          }
+
                                           Bitmap sticker = makeStickerBitmap(foreground);
                                           String data = bitmapToDataUrl(sticker);
                                           sendStickerResult(data == null ? "" : data);
@@ -652,11 +686,11 @@ jobs:
         run: |
           mkdir -p output
           cp android-build/app/build/outputs/apk/debug/app-debug.apk \
-             output/future-APK-v19.15-sticker-segmentation.apk
+             output/future-APK-v19.16-sticker-segmentation.apk
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: future-APK-v19.15-sticker-segmentation
-          path: output/future-APK-v19.15-sticker-segmentation.apk
+          name: future-APK-v19.16-sticker-segmentation
+          path: output/future-APK-v19.16-sticker-segmentation.apk
           if-no-files-found: error
