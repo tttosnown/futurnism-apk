@@ -1430,7 +1430,7 @@ window.onStickerReady=function(dataUrl){
  if(!dataUrl){
   tempPhotoMode='original';
   updatePhotoModeUI();
-  alert('主体识别失败，请换一张主体更清晰的照片。');
+  alert('主体识别没有得到有效结果。请保持网络连接后再试一次；如果仍失败，再换一张主体明显的照片。');
   return;
  }
  tempPhoto=dataUrl;
