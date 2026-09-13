@@ -816,9 +816,6 @@ jobs:
               implementation 'com.microsoft.onnxruntime:onnxruntime-android:1.29.0'
           }
 
-          androidResources {
-              noCompress += ['onnx']
-          }
           """
           p.write_text(s)
           PY
