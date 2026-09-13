@@ -245,10 +245,9 @@ jobs:
           import com.google.mediapipe.framework.image.MPImage;
           import com.google.mediapipe.framework.image.ByteBufferExtractor;
           import com.google.mediapipe.tasks.core.BaseOptions;
-          import com.google.mediapipe.tasks.vision.ImageSegmenter;
-          import com.google.mediapipe.tasks.vision.ImageSegmenterResult;
-          import com.google.mediapipe.tasks.vision.ImageSegmenter.ImageSegmenterOptions;
-          import com.google.mediapipe.tasks.vision.core.RunningMode;
+          import com.google.mediapipe.tasks.vision.imagesegmenter.ImageSegmenter;
+          import com.google.mediapipe.tasks.vision.imagesegmenter.ImageSegmenterResult;
+                    import com.google.mediapipe.tasks.vision.core.RunningMode;
 
           import org.json.JSONObject;
 
@@ -377,7 +376,7 @@ jobs:
                       BaseOptions baseOptions = BaseOptions.builder()
                               .setModelAssetPath("deeplabv3.tflite")
                               .build();
-                      ImageSegmenterOptions options = ImageSegmenterOptions.builder()
+                      ImageSegmenter.ImageSegmenterOptions options = ImageSegmenter.ImageSegmenterOptions.builder()
                               .setBaseOptions(baseOptions)
                               .setRunningMode(RunningMode.IMAGE)
                               .setOutputCategoryMask(true)
