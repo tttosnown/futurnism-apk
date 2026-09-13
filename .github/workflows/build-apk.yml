@@ -52,6 +52,12 @@ jobs:
           mkdir -p android-build/app/src/main/res/mipmap-xxxhdpi
           mkdir -p android-build/app/src/main/res/xml
 
+          # Bundle the segmentation model into the APK. The app never downloads a model
+          # from Google Play services at runtime.
+          curl -L --fail --retry 3 \
+            "https://tfhub.dev/tensorflow/lite-model/deeplabv3/1/metadata/2?lite-format=tflite" \
+            -o android-build/app/src/main/assets/deeplabv3.tflite
+
           cp index.html android-build/app/src/main/assets/index.html
 
           if [ -f manifest.json ]; then
@@ -123,8 +129,8 @@ jobs:
                   applicationId 'com.futurism.app'
                   minSdk 24
                   targetSdk 35
-                  versionCode 22
-                  versionName '19.16'
+                  versionCode 24
+                  versionName '19.18'
               }
           }
           EOF
@@ -160,11 +166,7 @@ jobs:
                   android:theme="@style/AppTheme"
                   android:usesCleartextTraffic="false">
 
-                  <meta-data
-                      android:name="com.google.mlkit.vision.DEPENDENCIES"
-                      android:value="subject_segment" />
-
-                  <activity
+                      <activity
                       android:name=".MainActivity"
                       android:exported="true">
 
@@ -239,14 +241,14 @@ jobs:
           import androidx.core.content.ContextCompat;
           import androidx.core.content.FileProvider;
 
-          import com.google.mlkit.vision.common.InputImage;
-          import com.google.mlkit.vision.segmentation.subject.SubjectSegmentation;
-          import com.google.mlkit.vision.segmentation.subject.SubjectSegmentationResult;
-          import com.google.mlkit.vision.segmentation.subject.SubjectSegmenter;
-          import com.google.mlkit.vision.segmentation.subject.SubjectSegmenterOptions;
-          import com.google.mlkit.vision.segmentation.subject.Subject;
-          import com.google.android.gms.common.moduleinstall.ModuleInstall;
-          import com.google.android.gms.common.moduleinstall.ModuleInstallRequest;
+          import com.google.mediapipe.framework.image.BitmapImageBuilder;
+          import com.google.mediapipe.framework.image.MPImage;
+          import com.google.mediapipe.framework.image.ByteBufferExtractor;
+          import com.google.mediapipe.tasks.core.BaseOptions;
+          import com.google.mediapipe.tasks.vision.ImageSegmenter;
+          import com.google.mediapipe.tasks.vision.ImageSegmenterResult;
+          import com.google.mediapipe.tasks.vision.ImageSegmenter.ImageSegmenterOptions;
+          import com.google.mediapipe.tasks.vision.core.RunningMode;
 
           import org.json.JSONObject;
 
@@ -263,7 +265,7 @@ jobs:
               private WebView webView;
               private ValueCallback<Uri[]> filePathCallback;
               private String pendingFileContent = null;
-              private SubjectSegmenter subjectSegmenter;
+              private ImageSegmenter imageSegmenter;
               private boolean stickerModelReady = false;
 
               @Override
@@ -371,33 +373,21 @@ jobs:
                       }
                   });
 
-                  SubjectSegmenterOptions.SubjectResultOptions subjectResultOptions =
-                          new SubjectSegmenterOptions.SubjectResultOptions.Builder()
-                                  .enableSubjectBitmap()
-                                  .build();
-                  SubjectSegmenterOptions options =
-                          new SubjectSegmenterOptions.Builder()
-                                  .enableForegroundBitmap()
-                                  .enableForegroundConfidenceMask()
-                                  .enableMultipleSubjects(subjectResultOptions)
-                                  .build();
-                  subjectSegmenter = SubjectSegmentation.getClient(options);
-
-                  // Explicitly ask Google Play services to install the subject-segmentation
-                  // module before the first sticker request. This prevents the first request
-                  // from failing while the model is still being downloaded.
-                  ModuleInstall.getClient(this)
-                          .installModules(ModuleInstallRequest.newBuilder()
-                                  .addApi(subjectSegmenter)
-                                  .build())
-                          .addOnSuccessListener(response ->
-                                  subjectSegmenter.getInitTask()
-                                          .addOnSuccessListener(v -> stickerModelReady = true)
-                                          .addOnFailureListener(e -> stickerModelReady = false))
-                          .addOnFailureListener(e ->
-                                  subjectSegmenter.getInitTask()
-                                          .addOnSuccessListener(v -> stickerModelReady = true)
-                                          .addOnFailureListener(err -> stickerModelReady = false));
+                  try {
+                      BaseOptions baseOptions = BaseOptions.builder()
+                              .setModelAssetPath("deeplabv3.tflite")
+                              .build();
+                      ImageSegmenterOptions options = ImageSegmenterOptions.builder()
+                              .setBaseOptions(baseOptions)
+                              .setRunningMode(RunningMode.IMAGE)
+                              .setOutputCategoryMask(true)
+                              .setOutputConfidenceMasks(false)
+                              .build();
+                      imageSegmenter = ImageSegmenter.createFromOptions(this, options);
+                      stickerModelReady = imageSegmenter != null;
+                  } catch (Exception e) {
+                      stickerModelReady = false;
+                  }
 
                   webView.addJavascriptInterface(new AndroidBridge(), "Android");
                   webView.loadUrl("file:///android_asset/index.html");
@@ -423,20 +413,37 @@ jobs:
                   ));
               }
 
-              private Bitmap makeStickerBitmap(Bitmap foreground) {
-                  if (foreground == null) return null;
+              private Bitmap makeStickerBitmap(Bitmap source, java.nio.ByteBuffer maskBuffer, int maskWidth, int maskHeight) {
+                  if (source == null || maskBuffer == null || maskWidth <= 0 || maskHeight <= 0) return null;
 
-                  int w = foreground.getWidth();
-                  int h = foreground.getHeight();
-                  int[] pixels = new int[w * h];
-                  foreground.getPixels(pixels, 0, w, 0, 0, w, h);
+                  final int sw = source.getWidth();
+                  final int sh = source.getHeight();
+                  Bitmap masked = Bitmap.createBitmap(sw, sh, Bitmap.Config.ARGB_8888);
+                  int[] src = new int[sw * sh];
+                  int[] dst = new int[sw * sh];
+                  source.getPixels(src, 0, sw, 0, 0, sw, sh);
 
-                  int left = w, top = h, right = -1, bottom = -1;
-                  for (int y = 0; y < h; y++) {
-                      int row = y * w;
-                      for (int x = 0; x < w; x++) {
-                          int a = Color.alpha(pixels[row + x]);
-                          if (a > 12) {
+                  maskBuffer.rewind();
+                  for (int y = 0; y < sh; y++) {
+                      int my = Math.min(maskHeight - 1, (int)((long)y * maskHeight / sh));
+                      for (int x = 0; x < sw; x++) {
+                          int mx = Math.min(maskWidth - 1, (int)((long)x * maskWidth / sw));
+                          int pos = my * maskWidth + mx;
+                          int category = maskBuffer.get(pos) & 0xff;
+                          int a = category == 0 ? 0 : 255;
+                          dst[y * sw + x] = (src[y * sw + x] & 0x00ffffff) | (a << 24);
+                      }
+                  }
+                  masked.setPixels(dst, 0, sw, 0, 0, sw, sh);
+
+                  // Trim transparent edges so the final PNG is genuinely irregular rather
+                  // than a rectangular photo with a white frame.
+                  int[] pixels = dst;
+                  int left = sw, top = sh, right = -1, bottom = -1;
+                  for (int y = 0; y < sh; y++) {
+                      int row = y * sw;
+                      for (int x = 0; x < sw; x++) {
+                          if (((pixels[row + x] >>> 24) & 0xff) > 20) {
                               if (x < left) left = x;
                               if (x > right) right = x;
                               if (y < top) top = y;
@@ -444,56 +451,39 @@ jobs:
                           }
                       }
                   }
+                  if (right < left || bottom < top) { masked.recycle(); return null; }
 
-                  if (right < left || bottom < top) return null;
+                  Bitmap cropped = Bitmap.createBitmap(masked, left, top, right - left + 1, bottom - top + 1);
+                  masked.recycle();
 
-                  int padCrop = Math.max(2, Math.min(12, Math.min(w, h) / 80));
-                  left = Math.max(0, left - padCrop);
-                  top = Math.max(0, top - padCrop);
-                  right = Math.min(w - 1, right + padCrop);
-                  bottom = Math.min(h - 1, bottom + padCrop);
-
-                  Bitmap cropped = Bitmap.createBitmap(
-                          foreground, left, top,
-                          right - left + 1,
-                          bottom - top + 1
-                  );
-
-                  int maxSide = 1100;
+                  int maxSide = 1000;
                   int max = Math.max(cropped.getWidth(), cropped.getHeight());
                   if (max > maxSide) {
                       float scale = (float) maxSide / max;
-                      cropped = Bitmap.createScaledBitmap(
-                              cropped,
+                      Bitmap scaled = Bitmap.createScaledBitmap(cropped,
                               Math.max(1, Math.round(cropped.getWidth() * scale)),
-                              Math.max(1, Math.round(cropped.getHeight() * scale)),
-                              true
-                      );
+                              Math.max(1, Math.round(cropped.getHeight() * scale)), true);
+                      cropped.recycle();
+                      cropped = scaled;
                   }
 
-                  int border = Math.max(12, Math.min(28, Math.round(Math.min(cropped.getWidth(), cropped.getHeight()) * 0.025f)));
+                  int border = Math.max(10, Math.min(24, Math.round(Math.min(cropped.getWidth(), cropped.getHeight()) * 0.025f)));
                   Bitmap alpha = cropped.extractAlpha();
-                  Bitmap out = Bitmap.createBitmap(
-                          cropped.getWidth() + border * 2,
-                          cropped.getHeight() + border * 2,
-                          Bitmap.Config.ARGB_8888
-                  );
-
+                  Bitmap out = Bitmap.createBitmap(cropped.getWidth() + border * 2,
+                          cropped.getHeight() + border * 2, Bitmap.Config.ARGB_8888);
                   Canvas canvas = new Canvas(out);
                   Paint white = new Paint(Paint.ANTI_ALIAS_FLAG | Paint.FILTER_BITMAP_FLAG);
                   white.setColor(Color.WHITE);
-
-                  int steps = 28;
+                  int steps = 32;
                   for (int i = 0; i < steps; i++) {
-                      double angle = (Math.PI * 2.0 * i) / steps;
-                      float dx = (float) (Math.cos(angle) * border);
-                      float dy = (float) (Math.sin(angle) * border);
+                      double angle = Math.PI * 2.0 * i / steps;
+                      float dx = (float)(Math.cos(angle) * border);
+                      float dy = (float)(Math.sin(angle) * border);
                       canvas.drawBitmap(alpha, border + dx, border + dy, white);
                   }
-
                   canvas.drawBitmap(cropped, border, border, null);
                   alpha.recycle();
-                  if (cropped != foreground) cropped.recycle();
+                  cropped.recycle();
                   return out;
               }
 
@@ -522,80 +512,69 @@ jobs:
 
                   @JavascriptInterface
                   public void makeSticker(String dataUrl) {
-                      try {
-                          if (dataUrl == null) {
+                      new Thread(() -> {
+                          Bitmap source = null;
+                          Bitmap sticker = null;
+                          try {
+                              if (dataUrl == null || imageSegmenter == null) {
+                                  sendStickerResult("");
+                                  return;
+                              }
+                              String raw = dataUrl;
+                              int comma = raw.indexOf(',');
+                              if (comma >= 0) raw = raw.substring(comma + 1);
+                              byte[] bytes = Base64.decode(raw, Base64.DEFAULT);
+
+                              BitmapFactory.Options bounds = new BitmapFactory.Options();
+                              bounds.inJustDecodeBounds = true;
+                              BitmapFactory.decodeByteArray(bytes, 0, bytes.length, bounds);
+                              if (bounds.outWidth <= 0 || bounds.outHeight <= 0) {
+                                  sendStickerResult("");
+                                  return;
+                              }
+                              int maxDim = Math.max(bounds.outWidth, bounds.outHeight);
+                              int sample = 1;
+                              while (maxDim / sample > 1280) sample *= 2;
+                              BitmapFactory.Options opts = new BitmapFactory.Options();
+                              opts.inSampleSize = sample;
+                              opts.inPreferredConfig = Bitmap.Config.ARGB_8888;
+                              source = BitmapFactory.decodeByteArray(bytes, 0, bytes.length, opts);
+                              if (source == null) { sendStickerResult(""); return; }
+
+                              int actualMax = Math.max(source.getWidth(), source.getHeight());
+                              if (actualMax > 1280) {
+                                  float scale = 1280f / actualMax;
+                                  Bitmap scaled = Bitmap.createScaledBitmap(source,
+                                          Math.max(1, Math.round(source.getWidth() * scale)),
+                                          Math.max(1, Math.round(source.getHeight() * scale)), true);
+                                  source.recycle();
+                                  source = scaled;
+                              }
+
+                              MPImage mpImage = new BitmapImageBuilder(source).build();
+                              ImageSegmenterResult result = imageSegmenter.segment(mpImage);
+                              if (result == null || result.categoryMask().isEmpty()) {
+                                  sendStickerResult("");
+                                  return;
+                              }
+
+                              MPImage mask = result.categoryMask().get();
+                              java.nio.ByteBuffer buffer = ByteBufferExtractor.extract(mask);
+                              int maskWidth = mask.getWidth();
+                              int maskHeight = mask.getHeight();
+                              sticker = makeStickerBitmap(source, buffer, maskWidth, maskHeight);
+                              String data = bitmapToDataUrl(sticker);
+                              sticker = null;
+                              sendStickerResult(data == null ? "" : data);
+                          } catch (OutOfMemoryError oom) {
                               sendStickerResult("");
-                              return;
-                          }
-
-                          String raw = dataUrl;
-                          int comma = raw.indexOf(',');
-                          if (comma >= 0) raw = raw.substring(comma + 1);
-                          byte[] bytes = Base64.decode(raw, Base64.DEFAULT);
-                          Bitmap input = BitmapFactory.decodeByteArray(bytes, 0, bytes.length);
-                          if (input == null || subjectSegmenter == null) {
+                          } catch (Exception e) {
                               sendStickerResult("");
-                              return;
+                          } finally {
+                              if (sticker != null && !sticker.isRecycled()) sticker.recycle();
+                              if (source != null && !source.isRecycled()) source.recycle();
                           }
-
-                          InputImage image = InputImage.fromBitmap(input, 0);
-                          // Always wait for model initialization. On first run this can include
-                          // downloading the Google Play services subject-segmentation model.
-                          subjectSegmenter.getInitTask()
-                                  .addOnSuccessListener(v -> {
-                                      stickerModelReady = true;
-                                      subjectSegmenter.process(image)
-                                  .addOnSuccessListener(result -> {
-                                      try {
-                                          Bitmap foreground = null;
-
-                                          // Prefer the largest individual subject. This is more
-                                          // reliable for a single main object (for example a cat)
-                                          // and avoids keeping unrelated foreground objects.
-                                          try {
-                                              java.util.List<Subject> subjects = result.getSubjects();
-                                              if (subjects != null && !subjects.isEmpty()) {
-                                                  Subject best = null;
-                                                  long bestArea = -1;
-                                                  for (Subject subject : subjects) {
-                                                      if (subject == null) continue;
-                                                      long area = (long) subject.getWidth() * (long) subject.getHeight();
-                                                      if (area > bestArea && subject.getBitmap() != null) {
-                                                          bestArea = area;
-                                                          best = subject;
-                                                      }
-                                                  }
-                                                  if (best != null) foreground = best.getBitmap();
-                                              }
-                                          } catch (Exception ignored) {
-                                              // Fall back to the combined foreground below.
-                                          }
-
-                                          if (foreground == null) {
-                                              foreground = result.getForegroundBitmap();
-                                          }
-
-                                          Bitmap sticker = makeStickerBitmap(foreground);
-                                          String data = bitmapToDataUrl(sticker);
-                                          sendStickerResult(data == null ? "" : data);
-                                      } catch (Exception ex) {
-                                          sendStickerResult("");
-                                      } finally {
-                                          input.recycle();
-                                      }
-                                  })
-                                  .addOnFailureListener(e -> {
-                                      input.recycle();
-                                      sendStickerResult("");
-                                  });
-                                  })
-                                  .addOnFailureListener(e -> {
-                                      input.recycle();
-                                      sendStickerResult("");
-                                  });
-                      } catch (Exception e) {
-                          sendStickerResult("");
-                      }
+                      }).start();
                   }
               }
 
@@ -640,7 +619,7 @@ jobs:
 
               @Override
               protected void onDestroy() {
-                  if (subjectSegmenter != null) subjectSegmenter.close();
+                  if (imageSegmenter != null) imageSegmenter.close();
                   if (webView != null) webView.destroy();
                   super.onDestroy();
               }
@@ -660,16 +639,7 @@ jobs:
 
           dependencies {
               implementation 'androidx.core:core:1.15.0'
-              implementation('com.google.android.gms:play-services-mlkit-subject-segmentation:16.0.0-beta1') {
-                  exclude group: 'org.jetbrains.kotlin', module: 'kotlin-stdlib-jdk7'
-                  exclude group: 'org.jetbrains.kotlin', module: 'kotlin-stdlib-jdk8'
-              }
-          }
-
-          configurations.configureEach {
-              exclude group: 'org.jetbrains.kotlin', module: 'kotlin-stdlib-jdk7'
-              exclude group: 'org.jetbrains.kotlin', module: 'kotlin-stdlib-jdk8'
-              resolutionStrategy.force 'org.jetbrains.kotlin:kotlin-stdlib:1.8.22'
+              implementation 'com.google.mediapipe:tasks-vision:0.10.22'
           }
           '''
 
@@ -686,11 +656,11 @@ jobs:
         run: |
           mkdir -p output
           cp android-build/app/build/outputs/apk/debug/app-debug.apk \
-             output/future-APK-v19.16-sticker-segmentation.apk
+             output/future-APK-v19.18-local-sticker-segmentation.apk
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: future-APK-v19.16-sticker-segmentation
-          path: output/future-APK-v19.16-sticker-segmentation.apk
+          name: future-APK-v19.18-local-sticker-segmentation
+          path: output/future-APK-v19.18-local-sticker-segmentation.apk
           if-no-files-found: error
