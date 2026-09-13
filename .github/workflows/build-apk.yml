@@ -415,6 +415,100 @@ jobs:
               private Bitmap makeStickerBitmap(Bitmap source, java.nio.ByteBuffer maskBuffer, int maskWidth, int maskHeight) {
                   if (source == null || maskBuffer == null || maskWidth <= 0 || maskHeight <= 0) return null;
 
+                  // Work on the model mask first.  DeepLab-V3 can leave tiny holes and
+                  // disconnected islands around hair/clothes.  Cleaning the low-res mask
+                  // before scaling it up gives a much more natural sticker silhouette.
+                  byte[] raw = new byte[maskWidth * maskHeight];
+                  maskBuffer.rewind();
+                  for (int i = 0; i < raw.length && maskBuffer.hasRemaining(); i++) {
+                      raw[i] = (byte)((maskBuffer.get() & 0xff) == 0 ? 0 : 1);
+                  }
+
+                  // Morphological closing: fill small gaps and reconnect nearby pieces.
+                  byte[] closed = raw.clone();
+                  for (int pass = 0; pass < 2; pass++) {
+                      byte[] dilated = new byte[closed.length];
+                      for (int y = 0; y < maskHeight; y++) {
+                          for (int x = 0; x < maskWidth; x++) {
+                              boolean on = false;
+                              for (int dy = -1; dy <= 1 && !on; dy++) {
+                                  int yy = y + dy;
+                                  if (yy < 0 || yy >= maskHeight) continue;
+                                  for (int dx = -1; dx <= 1; dx++) {
+                                      int xx = x + dx;
+                                      if (xx >= 0 && xx < maskWidth && closed[yy * maskWidth + xx] != 0) {
+                                          on = true; break;
+                                      }
+                                  }
+                              }
+                              dilated[y * maskWidth + x] = (byte)(on ? 1 : 0);
+                          }
+                      }
+                      byte[] eroded = new byte[closed.length];
+                      for (int y = 0; y < maskHeight; y++) {
+                          for (int x = 0; x < maskWidth; x++) {
+                              boolean on = true;
+                              for (int dy = -1; dy <= 1 && on; dy++) {
+                                  int yy = y + dy;
+                                  if (yy < 0 || yy >= maskHeight) { on = false; break; }
+                                  for (int dx = -1; dx <= 1; dx++) {
+                                      int xx = x + dx;
+                                      if (xx < 0 || xx >= maskWidth || dilated[yy * maskWidth + xx] == 0) {
+                                          on = false; break;
+                                      }
+                                  }
+                              }
+                              eroded[y * maskWidth + x] = (byte)(on ? 1 : 0);
+                          }
+                      }
+                      closed = eroded;
+                  }
+
+                  // Remove only genuinely tiny isolated islands.  We keep the largest
+                  // connected component plus components that touch it after the closing
+                  // pass, so hands/hair that are part of the subject are not discarded.
+                  int n = maskWidth * maskHeight;
+                  int[] labels = new int[n];
+                  int[] queue = new int[n];
+                  int label = 0;
+                  int[] sizes = new int[n / 2 + 1];
+                  for (int i = 0; i < n; i++) {
+                      if (closed[i] == 0 || labels[i] != 0) continue;
+                      label++;
+                      int head = 0, tail = 0;
+                      queue[tail++] = i;
+                      labels[i] = label;
+                      int size = 0;
+                      while (head < tail) {
+                          int cur = queue[head++];
+                          size++;
+                          int cy = cur / maskWidth, cx = cur - cy * maskWidth;
+                          for (int dy = -1; dy <= 1; dy++) {
+                              int yy = cy + dy;
+                              if (yy < 0 || yy >= maskHeight) continue;
+                              for (int dx = -1; dx <= 1; dx++) {
+                                  if (dx == 0 && dy == 0) continue;
+                                  int xx = cx + dx;
+                                  if (xx < 0 || xx >= maskWidth) continue;
+                                  int ni = yy * maskWidth + xx;
+                                  if (closed[ni] != 0 && labels[ni] == 0) {
+                                      labels[ni] = label;
+                                      queue[tail++] = ni;
+                                  }
+                              }
+                          }
+                      }
+                      if (label < sizes.length) sizes[label] = size;
+                  }
+                  int largestLabel = 0, largestSize = 0;
+                  for (int i = 1; i <= label && i < sizes.length; i++) {
+                      if (sizes[i] > largestSize) { largestSize = sizes[i]; largestLabel = i; }
+                  }
+                  int minIsland = Math.max(8, (maskWidth * maskHeight) / 2200);
+                  for (int i = 0; i < n; i++) {
+                      if (closed[i] != 0 && labels[i] != largestLabel && sizes[labels[i]] < minIsland) closed[i] = 0;
+                  }
+
                   final int sw = source.getWidth();
                   final int sh = source.getHeight();
                   Bitmap masked = Bitmap.createBitmap(sw, sh, Bitmap.Config.ARGB_8888);
@@ -422,27 +516,34 @@ jobs:
                   int[] dst = new int[sw * sh];
                   source.getPixels(src, 0, sw, 0, 0, sw, sh);
 
-                  maskBuffer.rewind();
+                  // Bilinear-style 3x3 majority sampling from the cleaned mask gives
+                  // softer, less blocky edges than nearest-neighbour category pixels.
                   for (int y = 0; y < sh; y++) {
-                      int my = Math.min(maskHeight - 1, (int)((long)y * maskHeight / sh));
+                      float fy = ((y + 0.5f) * maskHeight / sh) - 0.5f;
+                      int cy = Math.max(0, Math.min(maskHeight - 1, Math.round(fy)));
                       for (int x = 0; x < sw; x++) {
-                          int mx = Math.min(maskWidth - 1, (int)((long)x * maskWidth / sw));
-                          int pos = my * maskWidth + mx;
-                          int category = maskBuffer.get(pos) & 0xff;
-                          int a = category == 0 ? 0 : 255;
+                          float fx = ((x + 0.5f) * maskWidth / sw) - 0.5f;
+                          int cx = Math.max(0, Math.min(maskWidth - 1, Math.round(fx)));
+                          int count = 0;
+                          for (int dy = -1; dy <= 1; dy++) {
+                              int yy = cy + dy;
+                              if (yy < 0 || yy >= maskHeight) continue;
+                              for (int dx = -1; dx <= 1; dx++) {
+                                  int xx = cx + dx;
+                                  if (xx >= 0 && xx < maskWidth && closed[yy * maskWidth + xx] != 0) count++;
+                              }
+                          }
+                          int a = count >= 4 ? 255 : (count == 3 ? 210 : 0);
                           dst[y * sw + x] = (src[y * sw + x] & 0x00ffffff) | (a << 24);
                       }
                   }
                   masked.setPixels(dst, 0, sw, 0, 0, sw, sh);
 
-                  // Trim transparent edges so the final PNG is genuinely irregular rather
-                  // than a rectangular photo with a white frame.
-                  int[] pixels = dst;
                   int left = sw, top = sh, right = -1, bottom = -1;
                   for (int y = 0; y < sh; y++) {
                       int row = y * sw;
                       for (int x = 0; x < sw; x++) {
-                          if (((pixels[row + x] >>> 24) & 0xff) > 20) {
+                          if (((dst[row + x] >>> 24) & 0xff) > 20) {
                               if (x < left) left = x;
                               if (x > right) right = x;
                               if (y < top) top = y;
