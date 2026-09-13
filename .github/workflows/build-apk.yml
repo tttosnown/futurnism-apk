@@ -52,12 +52,6 @@ jobs:
           mkdir -p android-build/app/src/main/res/mipmap-xxxhdpi
           mkdir -p android-build/app/src/main/res/xml
 
-          # Bundle the segmentation model into the APK. The app never downloads a model
-          # from Google Play services at runtime.
-          curl -L --fail --retry 3 \
-            "https://storage.googleapis.com/mediapipe-models/image_segmenter/deeplab_v3/float32/1/deeplab_v3.tflite" \
-            -o android-build/app/src/main/assets/deeplabv3.tflite
-
           cp index.html android-build/app/src/main/assets/index.html
 
           if [ -f manifest.json ]; then
@@ -129,8 +123,8 @@ jobs:
                   applicationId 'com.futurism.app'
                   minSdk 24
                   targetSdk 35
-                  versionCode 24
-                  versionName '19.18'
+                  versionCode 23
+                  versionName '19.17'
               }
           }
           EOF
@@ -166,7 +160,11 @@ jobs:
                   android:theme="@style/AppTheme"
                   android:usesCleartextTraffic="false">
 
-                      <activity
+                  <meta-data
+                      android:name="com.google.mlkit.vision.DEPENDENCIES"
+                      android:value="subject_segment" />
+
+                  <activity
                       android:name=".MainActivity"
                       android:exported="true">
 
@@ -214,11 +212,12 @@ jobs:
         run: |
           cat > android-build/app/src/main/java/com/futurism/app/MainActivity.java <<'EOF'
           package com.futurism.app;
-
+          
           import android.Manifest;
           import android.app.Activity;
           import android.content.Intent;
           import android.content.pm.PackageManager;
+          import android.content.res.AssetManager;
           import android.graphics.Bitmap;
           import android.graphics.BitmapFactory;
           import android.graphics.Canvas;
@@ -226,7 +225,6 @@ jobs:
           import android.graphics.Paint;
           import android.net.Uri;
           import android.os.Bundle;
-          import android.provider.Settings;
           import android.util.Base64;
           import android.view.View;
           import android.view.Window;
@@ -236,56 +234,69 @@ jobs:
           import android.webkit.WebSettings;
           import android.webkit.WebView;
           import android.webkit.WebViewClient;
-
+          
           import androidx.core.app.ActivityCompat;
           import androidx.core.content.ContextCompat;
           import androidx.core.content.FileProvider;
-
-          import com.google.mediapipe.framework.image.BitmapImageBuilder;
-          import com.google.mediapipe.framework.image.MPImage;
-          import com.google.mediapipe.framework.image.ByteBufferExtractor;
-          import com.google.mediapipe.tasks.core.BaseOptions;
-          import com.google.mediapipe.tasks.vision.imagesegmenter.ImageSegmenter;
-          import com.google.mediapipe.tasks.vision.imagesegmenter.ImageSegmenterResult;
-                    import com.google.mediapipe.tasks.vision.core.RunningMode;
-
+          
+          import ai.onnxruntime.OnnxTensor;
+          import ai.onnxruntime.OrtEnvironment;
+          import ai.onnxruntime.OrtSession;
+          
           import org.json.JSONObject;
-
+          
           import java.io.ByteArrayOutputStream;
+          import java.io.File;
+          import java.io.FileInputStream;
+          import java.io.FileOutputStream;
+          import java.io.InputStream;
           import java.io.OutputStream;
+          import java.nio.ByteBuffer;
+          import java.nio.ByteOrder;
+          import java.nio.FloatBuffer;
           import java.nio.charset.StandardCharsets;
-
+          import java.util.Collections;
+          import java.util.concurrent.ExecutorService;
+          import java.util.concurrent.Executors;
+          
           public class MainActivity extends Activity {
-
+          
               private static final int FILE_CHOOSER_REQUEST = 1001;
               private static final int CAMERA_PERMISSION_REQUEST = 1002;
               private static final int CREATE_FILE_REQUEST = 1003;
-
+          
+              private static final int MODEL_SIZE = 1024;
+              private static final int MAX_SOURCE_DIM = 1024;
+              private static final String MODEL_ASSET = "birefnet-lite-1024.onnx";
+          
               private WebView webView;
               private ValueCallback<Uri[]> filePathCallback;
               private String pendingFileContent = null;
-              private ImageSegmenter imageSegmenter;
-              private boolean stickerModelReady = false;
-
+          
+              private OrtEnvironment ortEnvironment;
+              private OrtSession ortSession;
+              private String inputName;
+              private final ExecutorService stickerExecutor = Executors.newSingleThreadExecutor();
+              private volatile boolean stickerBusy = false;
+          
               @Override
               protected void onCreate(Bundle savedInstanceState) {
                   super.onCreate(savedInstanceState);
-
+          
                   Window window = getWindow();
                   window.setStatusBarColor(Color.rgb(242, 239, 224));
                   window.setNavigationBarColor(Color.rgb(242, 239, 224));
-
                   if (android.os.Build.VERSION.SDK_INT >= 23) {
                       window.getDecorView().setSystemUiVisibility(
-                          View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR |
-                          View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR
+                              View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR |
+                              View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR
                       );
                   }
-
+          
                   webView = new WebView(this);
                   webView.setFitsSystemWindows(true);
                   setContentView(webView);
-
+          
                   WebSettings settings = webView.getSettings();
                   settings.setJavaScriptEnabled(true);
                   settings.setDomStorageEnabled(true);
@@ -297,25 +308,22 @@ jobs:
                   settings.setSupportZoom(false);
                   settings.setLoadWithOverviewMode(false);
                   settings.setUseWideViewPort(false);
-
                   webView.setWebViewClient(new WebViewClient());
-
+          
                   webView.setWebChromeClient(new WebChromeClient() {
                       @Override
                       public boolean onShowFileChooser(
                               WebView webView,
                               ValueCallback<Uri[]> filePathCallback,
                               FileChooserParams fileChooserParams) {
-
+          
                           if (MainActivity.this.filePathCallback != null) {
                               MainActivity.this.filePathCallback.onReceiveValue(null);
                           }
-
                           MainActivity.this.filePathCallback = filePathCallback;
-
+          
                           String[] acceptTypes = fileChooserParams.getAcceptTypes();
                           boolean wantsJson = false;
-
                           if (acceptTypes != null) {
                               for (String type : acceptTypes) {
                                   if (type == null) continue;
@@ -326,7 +334,7 @@ jobs:
                                   }
                               }
                           }
-
+          
                           if (wantsJson) {
                               Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
                               intent.addCategory(Intent.CATEGORY_OPENABLE);
@@ -340,19 +348,17 @@ jobs:
                               }
                               return true;
                           }
-
+          
                           Intent galleryIntent = new Intent(Intent.ACTION_GET_CONTENT);
                           galleryIntent.addCategory(Intent.CATEGORY_OPENABLE);
                           galleryIntent.setType("image/*");
-
+          
                           Intent cameraIntent = null;
-                          if (ContextCompat.checkSelfPermission(
-                                  MainActivity.this,
-                                  Manifest.permission.CAMERA
-                          ) == PackageManager.PERMISSION_GRANTED) {
+                          if (ContextCompat.checkSelfPermission(MainActivity.this, Manifest.permission.CAMERA)
+                                  == PackageManager.PERMISSION_GRANTED) {
                               cameraIntent = new Intent(android.provider.MediaStore.ACTION_IMAGE_CAPTURE);
                           }
-
+          
                           Intent chooserIntent;
                           if (cameraIntent != null) {
                               chooserIntent = new Intent(Intent.ACTION_CHOOSER);
@@ -361,7 +367,7 @@ jobs:
                           } else {
                               chooserIntent = galleryIntent;
                           }
-
+          
                           try {
                               startActivityForResult(chooserIntent, FILE_CHOOSER_REQUEST);
                           } catch (Exception e) {
@@ -371,30 +377,12 @@ jobs:
                           return true;
                       }
                   });
-
-                  try {
-                      BaseOptions baseOptions = BaseOptions.builder()
-                              .setModelAssetPath("deeplabv3.tflite")
-                              .build();
-                      ImageSegmenter.ImageSegmenterOptions options = ImageSegmenter.ImageSegmenterOptions.builder()
-                              .setBaseOptions(baseOptions)
-                              .setRunningMode(RunningMode.IMAGE)
-                              .setOutputCategoryMask(true)
-                              .setOutputConfidenceMasks(false)
-                              .build();
-                      imageSegmenter = ImageSegmenter.createFromOptions(this, options);
-                      stickerModelReady = imageSegmenter != null;
-                  } catch (Exception e) {
-                      stickerModelReady = false;
-                  }
-
+          
                   webView.addJavascriptInterface(new AndroidBridge(), "Android");
                   webView.loadUrl("file:///android_asset/index.html");
-
-                  if (ContextCompat.checkSelfPermission(
-                          this,
-                          Manifest.permission.CAMERA
-                  ) != PackageManager.PERMISSION_GRANTED) {
+          
+                  if (ContextCompat.checkSelfPermission(MainActivity.this, Manifest.permission.CAMERA)
+                          != PackageManager.PERMISSION_GRANTED) {
                       ActivityCompat.requestPermissions(
                               this,
                               new String[]{Manifest.permission.CAMERA},
@@ -402,7 +390,7 @@ jobs:
                       );
                   }
               }
-
+          
               private void sendStickerResult(String dataUrl) {
                   if (webView == null) return;
                   final String safe = dataUrl == null ? "" : dataUrl;
@@ -411,139 +399,239 @@ jobs:
                           null
                   ));
               }
-
-              private Bitmap makeStickerBitmap(Bitmap source, java.nio.ByteBuffer maskBuffer, int maskWidth, int maskHeight) {
-                  if (source == null || maskBuffer == null || maskWidth <= 0 || maskHeight <= 0) return null;
-
-                  // Work on the model mask first.  DeepLab-V3 can leave tiny holes and
-                  // disconnected islands around hair/clothes.  Cleaning the low-res mask
-                  // before scaling it up gives a much more natural sticker silhouette.
-                  byte[] raw = new byte[maskWidth * maskHeight];
-                  maskBuffer.rewind();
-                  for (int i = 0; i < raw.length && maskBuffer.hasRemaining(); i++) {
-                      raw[i] = (byte)((maskBuffer.get() & 0xff) == 0 ? 0 : 1);
+          
+              private void sendStickerError() {
+                  sendStickerResult("");
+              }
+          
+              private synchronized void ensureOrtSession() throws Exception {
+                  if (ortSession != null) return;
+          
+                  File modelFile = new File(getFilesDir(), MODEL_ASSET);
+                  if (!modelFile.exists() || modelFile.length() < 150_000_000L) {
+                      AssetManager assets = getAssets();
+                      File temp = new File(getFilesDir(), MODEL_ASSET + ".tmp");
+                      if (temp.exists()) temp.delete();
+                      try (InputStream in = assets.open(MODEL_ASSET, AssetManager.ACCESS_STREAMING);
+                           OutputStream out = new FileOutputStream(temp)) {
+                          byte[] buffer = new byte[1024 * 1024];
+                          int n;
+                          while ((n = in.read(buffer)) != -1) out.write(buffer, 0, n);
+                          out.flush();
+                      }
+                      if (!temp.renameTo(modelFile)) {
+                          if (modelFile.exists()) modelFile.delete();
+                          if (!temp.renameTo(modelFile)) throw new Exception("无法准备贴纸模型");
+                      }
                   }
-
-                  // Morphological closing: fill small gaps and reconnect nearby pieces.
-                  byte[] closed = raw.clone();
+          
+                  ortEnvironment = OrtEnvironment.getEnvironment();
+                  ortSession = ortEnvironment.createSession(modelFile.getAbsolutePath());
+                  inputName = ortSession.getInputNames().iterator().next();
+              }
+          
+              private Bitmap decodeInput(String dataUrl) throws Exception {
+                  String raw = dataUrl;
+                  int comma = raw.indexOf(',');
+                  if (comma >= 0) raw = raw.substring(comma + 1);
+                  byte[] bytes = Base64.decode(raw, Base64.DEFAULT);
+          
+                  BitmapFactory.Options bounds = new BitmapFactory.Options();
+                  bounds.inJustDecodeBounds = true;
+                  BitmapFactory.decodeByteArray(bytes, 0, bytes.length, bounds);
+                  if (bounds.outWidth <= 0 || bounds.outHeight <= 0) return null;
+          
+                  int maxDim = Math.max(bounds.outWidth, bounds.outHeight);
+                  int sample = 1;
+                  while (maxDim / sample > MAX_SOURCE_DIM) sample *= 2;
+          
+                  BitmapFactory.Options opts = new BitmapFactory.Options();
+                  opts.inSampleSize = sample;
+                  opts.inPreferredConfig = Bitmap.Config.ARGB_8888;
+                  Bitmap input = BitmapFactory.decodeByteArray(bytes, 0, bytes.length, opts);
+                  if (input == null) return null;
+          
+                  int actualMax = Math.max(input.getWidth(), input.getHeight());
+                  if (actualMax > MAX_SOURCE_DIM) {
+                      float scale = MAX_SOURCE_DIM / (float) actualMax;
+                      Bitmap scaled = Bitmap.createScaledBitmap(
+                              input,
+                              Math.max(1, Math.round(input.getWidth() * scale)),
+                              Math.max(1, Math.round(input.getHeight() * scale)),
+                              true
+                      );
+                      input.recycle();
+                      input = scaled;
+                  }
+                  return input;
+              }
+          
+              private Bitmap resizeForModel(Bitmap source) {
+                  return Bitmap.createScaledBitmap(source, MODEL_SIZE, MODEL_SIZE, true);
+              }
+          
+              private FloatBuffer bitmapToInputBuffer(Bitmap bitmap) {
+                  ByteBuffer bytes = ByteBuffer.allocateDirect(1 * 3 * MODEL_SIZE * MODEL_SIZE * 4)
+                          .order(ByteOrder.nativeOrder());
+                  FloatBuffer buffer = bytes.asFloatBuffer();
+          
+                  int[] pixels = new int[MODEL_SIZE * MODEL_SIZE];
+                  bitmap.getPixels(pixels, 0, MODEL_SIZE, 0, 0, MODEL_SIZE, MODEL_SIZE);
+          
+                  // NCHW, RGB, ImageNet normalization used by the exported BiRefNet model.
+                  final float meanR = 0.485f, meanG = 0.456f, meanB = 0.406f;
+                  final float stdR = 0.229f, stdG = 0.224f, stdB = 0.225f;
+                  int plane = MODEL_SIZE * MODEL_SIZE;
+                  for (int i = 0; i < plane; i++) {
+                      int c = pixels[i];
+                      float r = ((c >> 16) & 255) / 255f;
+                      float g = ((c >> 8) & 255) / 255f;
+                      float b = (c & 255) / 255f;
+                      buffer.put(i, (r - meanR) / stdR);
+                      buffer.put(plane + i, (g - meanG) / stdG);
+                      buffer.put(plane * 2 + i, (b - meanB) / stdB);
+                  }
+                  return buffer;
+              }
+          
+              private static float sigmoid(float x) {
+                  if (x >= 0) {
+                      double z = Math.exp(-x);
+                      return (float) (1.0 / (1.0 + z));
+                  } else {
+                      double z = Math.exp(x);
+                      return (float) (z / (1.0 + z));
+                  }
+              }
+          
+              private float[] runSegmentation(Bitmap source) throws Exception {
+                  Bitmap modelBitmap = resizeForModel(source);
+                  FloatBuffer inputBuffer = bitmapToInputBuffer(modelBitmap);
+                  modelBitmap.recycle();
+          
+                  long[] shape = new long[]{1, 3, MODEL_SIZE, MODEL_SIZE};
+                  float[] alpha = new float[MODEL_SIZE * MODEL_SIZE];
+          
+                  try (OnnxTensor tensor = OnnxTensor.createTensor(ortEnvironment, inputBuffer, shape);
+                       OrtSession.Result result = ortSession.run(Collections.singletonMap(inputName, tensor))) {
+                      OnnxTensor output = (OnnxTensor) result.get(0);
+                      FloatBuffer out = output.getFloatBuffer();
+                      out.rewind();
+                      for (int i = 0; i < alpha.length && out.hasRemaining(); i++) {
+                          alpha[i] = sigmoid(out.get());
+                      }
+                  }
+                  return alpha;
+              }
+          
+              private float sampleAlpha(float[] mask, int x, int y) {
+                  x = Math.max(0, Math.min(MODEL_SIZE - 1, x));
+                  y = Math.max(0, Math.min(MODEL_SIZE - 1, y));
+                  return mask[y * MODEL_SIZE + x];
+              }
+          
+              private float sampleBilinear(float[] mask, float fx, float fy) {
+                  fx = Math.max(0f, Math.min(MODEL_SIZE - 1f, fx));
+                  fy = Math.max(0f, Math.min(MODEL_SIZE - 1f, fy));
+                  int x0 = (int) Math.floor(fx);
+                  int y0 = (int) Math.floor(fy);
+                  int x1 = Math.min(MODEL_SIZE - 1, x0 + 1);
+                  int y1 = Math.min(MODEL_SIZE - 1, y0 + 1);
+                  float dx = fx - x0;
+                  float dy = fy - y0;
+                  float a = sampleAlpha(mask, x0, y0);
+                  float b = sampleAlpha(mask, x1, y0);
+                  float c = sampleAlpha(mask, x0, y1);
+                  float d = sampleAlpha(mask, x1, y1);
+                  return a * (1-dx) * (1-dy) + b * dx * (1-dy) + c * (1-dx) * dy + d * dx * dy;
+              }
+          
+              private Bitmap makeStickerBitmap(Bitmap source, float[] modelMask) {
+                  int w = source.getWidth();
+                  int h = source.getHeight();
+                  int[] src = new int[w * h];
+                  source.getPixels(src, 0, w, 0, 0, w, h);
+          
+                  int[] outPixels = new int[w * h];
+                  boolean[] keep = new boolean[w * h];
+          
+                  // Recall-first mask: a lower threshold intentionally keeps a little extra
+                  // around hair, hands and clothing rather than cutting them away.
+                  final float KEEP_THRESHOLD = 0.16f;
+                  for (int y = 0; y < h; y++) {
+                      float my = (y + 0.5f) * MODEL_SIZE / h - 0.5f;
+                      for (int x = 0; x < w; x++) {
+                          float mx = (x + 0.5f) * MODEL_SIZE / w - 0.5f;
+                          float p = sampleBilinear(modelMask, mx, my);
+                          keep[y * w + x] = p >= KEEP_THRESHOLD;
+                      }
+                  }
+          
+                  // Close tiny gaps, then expand the silhouette a little. This is deliberate:
+                  // the app should prefer a slightly loose sticker to a sticker missing fingers,
+                  // hair, shoulders or clothing.
+                  boolean[] closed = new boolean[w * h];
                   for (int pass = 0; pass < 2; pass++) {
-                      byte[] dilated = new byte[closed.length];
-                      for (int y = 0; y < maskHeight; y++) {
-                          for (int x = 0; x < maskWidth; x++) {
-                              boolean on = false;
-                              for (int dy = -1; dy <= 1 && !on; dy++) {
-                                  int yy = y + dy;
-                                  if (yy < 0 || yy >= maskHeight) continue;
-                                  for (int dx = -1; dx <= 1; dx++) {
-                                      int xx = x + dx;
-                                      if (xx >= 0 && xx < maskWidth && closed[yy * maskWidth + xx] != 0) {
-                                          on = true; break;
+                      for (int y = 0; y < h; y++) {
+                          for (int x = 0; x < w; x++) {
+                              boolean value = keep[y * w + x];
+                              if (!value) {
+                                  int count = 0;
+                                  for (int dy = -1; dy <= 1; dy++) {
+                                      for (int dx = -1; dx <= 1; dx++) {
+                                          int xx = x + dx, yy = y + dy;
+                                          if (xx >= 0 && xx < w && yy >= 0 && yy < h && keep[yy * w + xx]) count++;
                                       }
                                   }
+                                  value = count >= 5;
                               }
-                              dilated[y * maskWidth + x] = (byte)(on ? 1 : 0);
+                              closed[y * w + x] = value;
                           }
                       }
-                      byte[] eroded = new byte[closed.length];
-                      for (int y = 0; y < maskHeight; y++) {
-                          for (int x = 0; x < maskWidth; x++) {
-                              boolean on = true;
-                              for (int dy = -1; dy <= 1 && on; dy++) {
-                                  int yy = y + dy;
-                                  if (yy < 0 || yy >= maskHeight) { on = false; break; }
-                                  for (int dx = -1; dx <= 1; dx++) {
-                                      int xx = x + dx;
-                                      if (xx < 0 || xx >= maskWidth || dilated[yy * maskWidth + xx] == 0) {
-                                          on = false; break;
-                                      }
-                                  }
-                              }
-                              eroded[y * maskWidth + x] = (byte)(on ? 1 : 0);
-                          }
-                      }
-                      closed = eroded;
+                      boolean[] tmp = keep;
+                      keep = closed;
+                      closed = tmp;
                   }
-
-                  // Remove only genuinely tiny isolated islands.  We keep the largest
-                  // connected component plus components that touch it after the closing
-                  // pass, so hands/hair that are part of the subject are not discarded.
-                  int n = maskWidth * maskHeight;
-                  int[] labels = new int[n];
-                  int[] queue = new int[n];
-                  int label = 0;
-                  int[] sizes = new int[n / 2 + 1];
-                  for (int i = 0; i < n; i++) {
-                      if (closed[i] == 0 || labels[i] != 0) continue;
-                      label++;
-                      int head = 0, tail = 0;
-                      queue[tail++] = i;
-                      labels[i] = label;
-                      int size = 0;
-                      while (head < tail) {
-                          int cur = queue[head++];
-                          size++;
-                          int cy = cur / maskWidth, cx = cur - cy * maskWidth;
-                          for (int dy = -1; dy <= 1; dy++) {
-                              int yy = cy + dy;
-                              if (yy < 0 || yy >= maskHeight) continue;
-                              for (int dx = -1; dx <= 1; dx++) {
-                                  if (dx == 0 && dy == 0) continue;
-                                  int xx = cx + dx;
-                                  if (xx < 0 || xx >= maskWidth) continue;
-                                  int ni = yy * maskWidth + xx;
-                                  if (closed[ni] != 0 && labels[ni] == 0) {
-                                      labels[ni] = label;
-                                      queue[tail++] = ni;
+          
+                  int dilate = Math.max(2, Math.min(5, Math.round(Math.min(w, h) * 0.004f)));
+                  boolean[] expanded = new boolean[w * h];
+                  for (int y = 0; y < h; y++) {
+                      for (int x = 0; x < w; x++) {
+                          boolean value = false;
+                          outer:
+                          for (int dy = -dilate; dy <= dilate; dy++) {
+                              int yy = y + dy;
+                              if (yy < 0 || yy >= h) continue;
+                              for (int dx = -dilate; dx <= dilate; dx++) {
+                                  int xx = x + dx;
+                                  if (xx < 0 || xx >= w) continue;
+                                  if (keep[yy * w + xx]) {
+                                      value = true;
+                                      break outer;
                                   }
                               }
                           }
+                          expanded[y * w + x] = value;
                       }
-                      if (label < sizes.length) sizes[label] = size;
                   }
-                  int largestLabel = 0, largestSize = 0;
-                  for (int i = 1; i <= label && i < sizes.length; i++) {
-                      if (sizes[i] > largestSize) { largestSize = sizes[i]; largestLabel = i; }
-                  }
-                  int minIsland = Math.max(8, (maskWidth * maskHeight) / 2200);
-                  for (int i = 0; i < n; i++) {
-                      if (closed[i] != 0 && labels[i] != largestLabel && sizes[labels[i]] < minIsland) closed[i] = 0;
-                  }
-
-                  final int sw = source.getWidth();
-                  final int sh = source.getHeight();
-                  Bitmap masked = Bitmap.createBitmap(sw, sh, Bitmap.Config.ARGB_8888);
-                  int[] src = new int[sw * sh];
-                  int[] dst = new int[sw * sh];
-                  source.getPixels(src, 0, sw, 0, 0, sw, sh);
-
-                  // Bilinear-style 3x3 majority sampling from the cleaned mask gives
-                  // softer, less blocky edges than nearest-neighbour category pixels.
-                  for (int y = 0; y < sh; y++) {
-                      float fy = ((y + 0.5f) * maskHeight / sh) - 0.5f;
-                      int cy = Math.max(0, Math.min(maskHeight - 1, Math.round(fy)));
-                      for (int x = 0; x < sw; x++) {
-                          float fx = ((x + 0.5f) * maskWidth / sw) - 0.5f;
-                          int cx = Math.max(0, Math.min(maskWidth - 1, Math.round(fx)));
-                          int count = 0;
-                          for (int dy = -1; dy <= 1; dy++) {
-                              int yy = cy + dy;
-                              if (yy < 0 || yy >= maskHeight) continue;
-                              for (int dx = -1; dx <= 1; dx++) {
-                                  int xx = cx + dx;
-                                  if (xx >= 0 && xx < maskWidth && closed[yy * maskWidth + xx] != 0) count++;
-                              }
+          
+                  int left = w, top = h, right = -1, bottom = -1;
+                  for (int y = 0; y < h; y++) {
+                      for (int x = 0; x < w; x++) {
+                          int idx = y * w + x;
+                          if (!expanded[idx]) {
+                              outPixels[idx] = src[idx] & 0x00FFFFFF;
+                              continue;
                           }
-                          int a = count >= 4 ? 255 : (count == 3 ? 210 : 0);
-                          dst[y * sw + x] = (src[y * sw + x] & 0x00ffffff) | (a << 24);
-                      }
-                  }
-                  masked.setPixels(dst, 0, sw, 0, 0, sw, sh);
-
-                  int left = sw, top = sh, right = -1, bottom = -1;
-                  for (int y = 0; y < sh; y++) {
-                      int row = y * sw;
-                      for (int x = 0; x < sw; x++) {
-                          if (((dst[row + x] >>> 24) & 0xff) > 20) {
+                          float mx = (x + 0.5f) * MODEL_SIZE / w - 0.5f;
+                          float my = (y + 0.5f) * MODEL_SIZE / h - 0.5f;
+                          float p = sampleBilinear(modelMask, mx, my);
+                          // Keep soft edges but never let the low recall threshold become a hard halo.
+                          float a = Math.max(0f, Math.min(1f, (p - 0.08f) / 0.82f));
+                          if (p < KEEP_THRESHOLD) a = Math.max(a, 0.16f);
+                          int ai = Math.max(12, Math.min(255, Math.round(a * 255f)));
+                          outPixels[idx] = (ai << 24) | (src[idx] & 0x00FFFFFF);
+                          if (ai > 12) {
                               if (x < left) left = x;
                               if (x > right) right = x;
                               if (y < top) top = y;
@@ -551,34 +639,46 @@ jobs:
                           }
                       }
                   }
-                  if (right < left || bottom < top) { masked.recycle(); return null; }
-
+          
+                  if (right < left || bottom < top) return null;
+          
+                  Bitmap masked = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888);
+                  masked.setPixels(outPixels, 0, w, 0, 0, w, h);
+                  int padCrop = Math.max(3, Math.min(16, Math.min(w, h) / 70));
+                  left = Math.max(0, left - padCrop);
+                  top = Math.max(0, top - padCrop);
+                  right = Math.min(w - 1, right + padCrop);
+                  bottom = Math.min(h - 1, bottom + padCrop);
+          
                   Bitmap cropped = Bitmap.createBitmap(masked, left, top, right - left + 1, bottom - top + 1);
                   masked.recycle();
-
-                  int maxSide = 1000;
-                  int max = Math.max(cropped.getWidth(), cropped.getHeight());
-                  if (max > maxSide) {
-                      float scale = (float) maxSide / max;
-                      Bitmap scaled = Bitmap.createScaledBitmap(cropped,
+                  if (cropped.getWidth() > 1000 || cropped.getHeight() > 1000) {
+                      float scale = 1000f / Math.max(cropped.getWidth(), cropped.getHeight());
+                      Bitmap scaled = Bitmap.createScaledBitmap(
+                              cropped,
                               Math.max(1, Math.round(cropped.getWidth() * scale)),
-                              Math.max(1, Math.round(cropped.getHeight() * scale)), true);
+                              Math.max(1, Math.round(cropped.getHeight() * scale)),
+                              true
+                      );
                       cropped.recycle();
                       cropped = scaled;
                   }
-
-                  int border = Math.max(10, Math.min(24, Math.round(Math.min(cropped.getWidth(), cropped.getHeight()) * 0.025f)));
+          
+                  int border = Math.max(12, Math.min(30, Math.round(Math.min(cropped.getWidth(), cropped.getHeight()) * 0.028f)));
                   Bitmap alpha = cropped.extractAlpha();
-                  Bitmap out = Bitmap.createBitmap(cropped.getWidth() + border * 2,
-                          cropped.getHeight() + border * 2, Bitmap.Config.ARGB_8888);
+                  Bitmap out = Bitmap.createBitmap(
+                          cropped.getWidth() + border * 2,
+                          cropped.getHeight() + border * 2,
+                          Bitmap.Config.ARGB_8888
+                  );
                   Canvas canvas = new Canvas(out);
                   Paint white = new Paint(Paint.ANTI_ALIAS_FLAG | Paint.FILTER_BITMAP_FLAG);
                   white.setColor(Color.WHITE);
                   int steps = 32;
                   for (int i = 0; i < steps; i++) {
-                      double angle = Math.PI * 2.0 * i / steps;
-                      float dx = (float)(Math.cos(angle) * border);
-                      float dy = (float)(Math.sin(angle) * border);
+                      double angle = (Math.PI * 2.0 * i) / steps;
+                      float dx = (float) (Math.cos(angle) * border);
+                      float dy = (float) (Math.sin(angle) * border);
                       canvas.drawBitmap(alpha, border + dx, border + dy, white);
                   }
                   canvas.drawBitmap(cropped, border, border, null);
@@ -586,18 +686,16 @@ jobs:
                   cropped.recycle();
                   return out;
               }
-
+          
               private String bitmapToDataUrl(Bitmap bitmap) {
                   if (bitmap == null) return null;
                   ByteArrayOutputStream out = new ByteArrayOutputStream();
                   bitmap.compress(Bitmap.CompressFormat.PNG, 100, out);
                   bitmap.recycle();
-                  return "data:image/png;base64," +
-                          Base64.encodeToString(out.toByteArray(), Base64.NO_WRAP);
+                  return "data:image/png;base64," + Base64.encodeToString(out.toByteArray(), Base64.NO_WRAP);
               }
-
+          
               public class AndroidBridge {
-
                   @JavascriptInterface
                   public void saveFile(String filename, String content) {
                       runOnUiThread(() -> {
@@ -609,79 +707,44 @@ jobs:
                           startActivityForResult(intent, CREATE_FILE_REQUEST);
                       });
                   }
-
+          
                   @JavascriptInterface
                   public void makeSticker(String dataUrl) {
-                      new Thread(() -> {
+                      if (stickerBusy) return;
+                      if (dataUrl == null || dataUrl.length() < 100) {
+                          sendStickerError();
+                          return;
+                      }
+                      stickerBusy = true;
+                      stickerExecutor.execute(() -> {
                           Bitmap source = null;
                           Bitmap sticker = null;
                           try {
-                              if (dataUrl == null || imageSegmenter == null) {
-                                  sendStickerResult("");
-                                  return;
-                              }
-                              String raw = dataUrl;
-                              int comma = raw.indexOf(',');
-                              if (comma >= 0) raw = raw.substring(comma + 1);
-                              byte[] bytes = Base64.decode(raw, Base64.DEFAULT);
-
-                              BitmapFactory.Options bounds = new BitmapFactory.Options();
-                              bounds.inJustDecodeBounds = true;
-                              BitmapFactory.decodeByteArray(bytes, 0, bytes.length, bounds);
-                              if (bounds.outWidth <= 0 || bounds.outHeight <= 0) {
-                                  sendStickerResult("");
-                                  return;
-                              }
-                              int maxDim = Math.max(bounds.outWidth, bounds.outHeight);
-                              int sample = 1;
-                              while (maxDim / sample > 1280) sample *= 2;
-                              BitmapFactory.Options opts = new BitmapFactory.Options();
-                              opts.inSampleSize = sample;
-                              opts.inPreferredConfig = Bitmap.Config.ARGB_8888;
-                              source = BitmapFactory.decodeByteArray(bytes, 0, bytes.length, opts);
-                              if (source == null) { sendStickerResult(""); return; }
-
-                              int actualMax = Math.max(source.getWidth(), source.getHeight());
-                              if (actualMax > 1280) {
-                                  float scale = 1280f / actualMax;
-                                  Bitmap scaled = Bitmap.createScaledBitmap(source,
-                                          Math.max(1, Math.round(source.getWidth() * scale)),
-                                          Math.max(1, Math.round(source.getHeight() * scale)), true);
-                                  source.recycle();
-                                  source = scaled;
-                              }
-
-                              MPImage mpImage = new BitmapImageBuilder(source).build();
-                              ImageSegmenterResult result = imageSegmenter.segment(mpImage);
-                              if (result == null || result.categoryMask().isEmpty()) {
-                                  sendStickerResult("");
-                                  return;
-                              }
-
-                              MPImage mask = result.categoryMask().get();
-                              java.nio.ByteBuffer buffer = ByteBufferExtractor.extract(mask);
-                              int maskWidth = mask.getWidth();
-                              int maskHeight = mask.getHeight();
-                              sticker = makeStickerBitmap(source, buffer, maskWidth, maskHeight);
-                              String data = bitmapToDataUrl(sticker);
+                              ensureOrtSession();
+                              source = decodeInput(dataUrl);
+                              if (source == null) throw new Exception("图片读取失败");
+                              float[] mask = runSegmentation(source);
+                              sticker = makeStickerBitmap(source, mask);
+                              if (sticker == null) throw new Exception("没有得到有效主体");
+                              String result = bitmapToDataUrl(sticker);
                               sticker = null;
-                              sendStickerResult(data == null ? "" : data);
+                              sendStickerResult(result == null ? "" : result);
                           } catch (OutOfMemoryError oom) {
-                              sendStickerResult("");
-                          } catch (Exception e) {
-                              sendStickerResult("");
+                              sendStickerError();
+                          } catch (Throwable t) {
+                              sendStickerError();
                           } finally {
                               if (sticker != null && !sticker.isRecycled()) sticker.recycle();
                               if (source != null && !source.isRecycled()) source.recycle();
+                              stickerBusy = false;
                           }
-                      }).start();
+                      });
                   }
               }
-
+          
               @Override
               protected void onActivityResult(int requestCode, int resultCode, Intent data) {
                   super.onActivityResult(requestCode, resultCode, data);
-
                   if (requestCode == FILE_CHOOSER_REQUEST) {
                       if (filePathCallback == null) return;
                       Uri[] results = null;
@@ -693,15 +756,12 @@ jobs:
                       filePathCallback = null;
                       return;
                   }
-
                   if (requestCode == CREATE_FILE_REQUEST) {
                       if (resultCode == RESULT_OK && data != null && data.getData() != null && pendingFileContent != null) {
-                          try {
-                              OutputStream output = getContentResolver().openOutputStream(data.getData());
+                          try (OutputStream output = getContentResolver().openOutputStream(data.getData())) {
                               if (output != null) {
                                   output.write(pendingFileContent.getBytes(StandardCharsets.UTF_8));
                                   output.flush();
-                                  output.close();
                               }
                           } catch (Exception e) {
                               e.printStackTrace();
@@ -710,39 +770,56 @@ jobs:
                       pendingFileContent = null;
                   }
               }
-
+          
               @Override
               public void onBackPressed() {
                   if (webView != null && webView.canGoBack()) webView.goBack();
                   else super.onBackPressed();
               }
-
+          
               @Override
               protected void onDestroy() {
-                  if (imageSegmenter != null) imageSegmenter.close();
+                  stickerExecutor.shutdownNow();
+                  if (ortSession != null) {
+                      try { ortSession.close(); } catch (Exception ignored) {}
+                      ortSession = null;
+                  }
                   if (webView != null) webView.destroy();
                   super.onDestroy();
               }
           }
           EOF
 
-      - name: Add AndroidX dependency
+      - name: Download local sticker model
+        shell: bash
+        run: |
+          set -e
+          mkdir -p android-build/app/src/main/assets
+          curl -L --fail --retry 3 --retry-delay 2 \
+            "https://huggingface.co/CoderViking/birefnet-lite-onnx/resolve/main/birefnet-lite-1024.onnx?download=true" \
+            -o android-build/app/src/main/assets/birefnet-lite-1024.onnx
+          echo "50a57872cc739192446da2a934159f957c81af8b5a161dfda8e3daa51660ca67  android-build/app/src/main/assets/birefnet-lite-1024.onnx" | sha256sum -c -
+
+      - name: Add Android dependencies
         shell: bash
         run: |
           python3 - <<'PY'
           from pathlib import Path
-
           p = Path("android-build/app/build.gradle")
           s = p.read_text()
-
-          s += r'''
+          s = s.replace("versionCode 23", "versionCode 24")
+          s = s.replace("versionName '19.17'", "versionName '19.19'")
+          s += """
 
           dependencies {
               implementation 'androidx.core:core:1.15.0'
-              implementation 'com.google.mediapipe:tasks-vision:0.10.32'
+              implementation 'com.microsoft.onnxruntime:onnxruntime-android:1.29.0'
           }
-          '''
 
+          androidResources {
+              noCompress += ['onnx']
+          }
+          """
           p.write_text(s)
           PY
 
@@ -756,11 +833,11 @@ jobs:
         run: |
           mkdir -p output
           cp android-build/app/build/outputs/apk/debug/app-debug.apk \
-             output/future-APK-v19.18-local-sticker-segmentation.apk
+             output/future-APK-v19.19-birefnet-sticker.apk
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: future-APK-v19.18-local-sticker-segmentation
-          path: output/future-APK-v19.18-local-sticker-segmentation.apk
+          name: future-APK-v19.19-birefnet-sticker
+          path: output/future-APK-v19.19-birefnet-sticker.apk
           if-no-files-found: error
