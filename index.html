@@ -1,370 +1,1982 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="zh-CN">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>名词解释刷题工具</title>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#f3f0f8">
+<title>future</title>
+<link rel="manifest" href="manifest.json">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="application-name" content="future">
+<link rel="icon" href="icons/icon-192.png">
+
 <style>
-*{margin:0;padding:0;box-sizing:border-box;}
+*{box-sizing:border-box}
 body{
-    font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;
-    max-width:760px;
-    margin:20px auto;
-    padding:0 16px;
-    background:#f7f8fa;
+ margin:0;
+ background:#f3f0f8;
+ color:#17151a;
+ font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display","PingFang SC",sans-serif;
+ transition:background 1.2s ease;
 }
-.tab-bar{
-    display:flex;
-    gap:8px;
-    margin-bottom:20px;
-}
-.tab-btn{
-    flex:1;
-    padding:12px;
-    border:none;
-    border-radius:10px;
-    font-size:16px;
-    cursor:pointer;
-    background:#ddd;
-}
-.tab-btn.active{
-    background:#6366f1;
-    color:#fff;
-}
-.view{
-    display:none;
-}
-.view.active{
-    display:block;
+button,input,textarea{font:inherit}
+button{border:0;background:none;color:inherit;cursor:pointer}
+button:focus{outline:none}
+button,input,textarea{ -webkit-tap-highlight-color:transparent }
+
+.app{
+ max-width:760px;
+ margin:auto;
+ min-height:100vh;
+ padding-bottom:88px;
 }
 
-/* 刷题模式样式 */
+header{
+ padding:28px 22px 18px;
+ display:flex;
+ justify-content:space-between;
+ align-items:center;
+}
+
+.logo{
+ font-size:27px;
+ font-weight:650;
+ letter-spacing:-.04em;
+}
+
+.sub{
+ font-size:12px;
+ opacity:.45;
+}
+
+.page{
+ display:none;
+ padding:0 18px;
+ opacity:0;
+ transform:translateY(3px);
+ pointer-events:none;
+ transition:opacity .16s ease,transform .16s ease;
+}
+
+.page.active{
+ display:block;
+ opacity:1;
+ transform:translateY(0);
+ pointer-events:auto;
+}
+
 .card{
-    background:#fff;
-    padding:28px 22px;
-    border-radius:14px;
-    box-shadow:0 1px 6px #00000015;
-    margin-bottom:24px;
-}
-.question{
-    font-size:18px;
-    font-weight:bold;
-    line-height:1.6;
-    margin-bottom:20px;
-}
-.answer{
-    font-size:15.5px;
-    line-height:1.7;
-    color:#222;
-    background:#f3f4f6;
-    padding:16px;
-    border-radius:10px;
-    display:none;
-    white-space:pre-wrap;
-}
-.btn-wrap{
-    display:flex;
-    gap:10px;
-    flex-wrap:wrap;
-}
-button{
-    flex:1;
-    min-width:100px;
-    padding:13px;
-    border:none;
-    border-radius:10px;
-    font-size:15px;
-    cursor:pointer;
-}
-.btn-show{background:#6366f1;color:white;}
-.btn-prev{background:#9ca3af;color:white;}
-.btn-next{background:#2563eb;color:white;}
-.index-text{
-    text-align:center;
-    margin-bottom:16px;
-    color:#666;
+ background:#fff;
+ border-radius:24px;
+ padding:22px;
+ margin-bottom:14px;
+ box-shadow:0 3px 18px #00000008;
 }
 
-/* 卡片检索模式 */
-.search-input{
-    width:100%;
-    padding:12px 14px;
-    border:1px solid #ccc;
-    border-radius:10px;
-    font-size:16px;
-    margin-bottom:16px;
+.label{
+ font-size:11px;
+ letter-spacing:.1em;
+ text-transform:uppercase;
+ opacity:.42;
+ margin-bottom:12px;
 }
-.card-item{
-    background:#fff;
-    border-radius:12px;
-    padding:16px;
-    margin-bottom:12px;
-    box-shadow:0 1px 4px #00000012;
+
+.date{
+ font-size:13px;
+ opacity:.5;
+ margin-bottom:14px;
 }
-.card-item-title{
-    font-weight:bold;
-    font-size:17px;
-    margin-bottom:8px;
-    cursor:pointer;
-    user-select:none;
+
+.memory-title{
+ font-size:23px;
+ line-height:1.25;
+ margin-bottom:16px;
 }
-.card-item-ans{
-    font-size:15px;
-    line-height:1.65;
-    color:#333;
-    padding-top:8px;
-    border-top:1px solid #eee;
-    display:none;
+
+.memory-text{
+ font-size:16px;
+ line-height:1.7;
+ white-space:pre-wrap;
+ word-break:break-word;
 }
+
+.empty{
+ padding:48px 20px;
+ text-align:center;
+ opacity:.45;
+}
+
+.today{
+ margin-top:28px;
+}
+
+.today textarea{
+ width:100%;
+ min-height:110px;
+ border:0;
+ outline:0;
+ resize:vertical;
+ background:#f7f5f9;
+ border-radius:18px;
+ padding:16px;
+}
+
+.actions{
+ display:flex;
+ gap:10px;
+ margin-top:12px;
+}
+
+.pill{
+ padding:11px 15px;
+ border-radius:999px;
+ background:#17151a;
+ color:white;
+ font-size:13px;
+}
+
+.pill.light{
+ background:#eeeaf1;
+ color:#17151a;
+}
+
+.bottom{
+ position:fixed;
+ bottom:0;
+ left:50%;
+ transform:translateX(-50%);
+ width:min(760px,100%);
+ padding:10px 18px calc(10px + env(safe-area-inset-bottom));
+ background:linear-gradient(to top,rgba(255,255,255,.78),rgba(255,255,255,.2));
+ backdrop-filter:blur(18px);
+ display:flex;
+ gap:8px;
+ z-index:4;
+ transition:background 1.2s ease;
+}
+
+.nav{
+ flex:1;
+ padding:13px;
+ border-radius:16px;
+ font-size:14px;
+}
+
+.nav.active{
+ background:#17151a;
+ color:white;
+}
+
+.monthbar{
+ display:flex;
+ justify-content:space-between;
+ align-items:center;
+ margin:8px 3px 18px;
+}
+
+.month{
+ font-size:22px;
+ font-weight:600;
+}
+
+.arrow{
+ width:40px;
+ height:40px;
+ border-radius:50%;
+ background:#fff;
+ font-size:22px;
+}
+
+.week,
+.calendar{
+ display:grid;
+ grid-template-columns:repeat(7,1fr);
+ gap:6px;
+}
+
+.week div{
+ text-align:center;
+ font-size:10px;
+ opacity:.35;
+ padding-bottom:5px;
+}
+
+.day{
+ min-height:72px;
+ background:#fff;
+ border-radius:13px;
+ padding:8px;
+ position:relative;
+ overflow:hidden;
+}
+
+.day.other{
+ opacity:.28;
+}
+
+.daynum{
+ font-size:11px;
+ opacity:.5;
+ position:relative;
+ z-index:2;
+}
+
+.mark{
+ position:absolute;
+ right:7px;
+ bottom:7px;
+ width:7px;
+ height:7px;
+ border-radius:50%;
+ background:#17151a;
+}
+
+.thumb{
+ position:absolute;
+ inset:0;
+ width:100%;
+ height:100%;
+ object-fit:cover;
+ opacity:.72;
+}
+
+.day.hasphoto .daynum{
+ background:#fff;
+ border-radius:8px;
+ padding:2px 4px;
+ width:max-content;
+}
+
+.overlay{
+ display:none;
+ position:fixed;
+ inset:0;
+ background:#00000045;
+ z-index:5;
+ align-items:flex-end;
+ opacity:0;
+ transition:opacity .16s ease;
+}
+
+.overlay.show{
+ display:flex;
+ opacity:1;
+}
+
+.sheet{
+ width:100%;
+ max-width:760px;
+ margin:auto;
+ background:#fff;
+ border-radius:28px 28px 0 0;
+ padding:20px 18px calc(24px + env(safe-area-inset-bottom));
+ max-height:88vh;
+ overflow:auto;
+ transform:translateY(12px);
+ opacity:.96;
+ transition:transform .18s ease,opacity .18s ease;
+}
+
+.overlay.show .sheet{
+ transform:translateY(0);
+ opacity:1;
+}
+
+.sheethead{
+ display:flex;
+ justify-content:space-between;
+ align-items:center;
+ margin-bottom:18px;
+}
+
+.close{
+ font-size:25px;
+ width:38px;
+ height:38px;
+ border-radius:50%;
+ background:#f1eef3;
+}
+
+.field{
+ margin-bottom:12px;
+}
+
+.field input,
+.field textarea{
+ width:100%;
+ border:0;
+ background:#f6f4f7;
+ border-radius:16px;
+ padding:13px;
+ outline:0;
+}
+
+.field textarea{
+ min-height:130px;
+ resize:vertical;
+}
+
+.preview{
+ max-height:300px;
+ width:100%;
+ object-fit:cover;
+ border-radius:18px;
+ margin:8px 0;
+}
+
+.record-list .card{
+ padding:17px;
+}
+
+.small-actions{
+ display:flex;
+ gap:8px;
+ margin-top:12px;
+}
+
+.small-actions button{
+ font-size:12px;
+ padding:8px 12px;
+ border-radius:999px;
+ background:#eeeaf1;
+}
+
+.iconbtn{
+ width:38px;
+ height:38px;
+ border-radius:50%;
+ display:inline-flex;
+ align-items:center;
+ justify-content:center;
+ background:#eeecef;
+ color:#111;
+ padding:0;
+}
+
+.iconbtn.dark{
+ background:#111;
+ color:#fff;
+}
+
+.iconbtn svg{
+ width:18px;
+ height:18px;
+ stroke:currentColor;
+ fill:none;
+ stroke-width:1.8;
+ stroke-linecap:round;
+ stroke-linejoin:round;
+}
+
+.iconrow{
+ display:flex;
+ gap:8px;
+ margin-top:12px;
+}
+
+.more{
+ width:40px;
+ height:40px;
+ border-radius:50%;
+ display:flex;
+ align-items:center;
+ justify-content:center;
+ gap:3px;
+ background:rgba(255,255,255,.62);
+}
+
+.more span{
+ width:3px;
+ height:3px;
+ background:#111;
+ border-radius:50%;
+}
+
+.setting-row{
+ display:flex;
+ align-items:center;
+ justify-content:space-between;
+ padding:17px 4px;
+ border-bottom:1px solid #eee;
+ cursor:pointer;
+}
+
+.setting-row:last-of-type{
+ border-bottom:0;
+}
+
+.setting-name{
+ font-size:15px;
+}
+
+.setting-desc{
+ font-size:11px;
+ opacity:.42;
+ margin-top:4px;
+}
+
+.setting-row>svg{
+ width:21px;
+ height:21px;
+ stroke:#111;
+ fill:none;
+ stroke-width:1.7;
+ stroke-linecap:round;
+ stroke-linejoin:round;
+}
+
+
+/* 纸张与 future 视觉层次 */
+body{
+ background-image:radial-gradient(rgba(30,25,35,.035) .7px,transparent .7px);
+ background-size:7px 7px;
+}
+.card,.sheet,.day,.arrow,.jar-week-btn{
+ border:1px solid rgba(30,25,35,.045);
+ box-shadow:0 8px 24px rgba(20,15,25,.055), inset 0 1px 0 rgba(255,255,255,.72);
+}
+.card{
+ background:rgba(255,255,255,.88);
+}
+.pill,.nav.active{box-shadow:0 5px 14px rgba(20,15,25,.10)}
+
+.photo-mode{margin:2px 0 14px;padding:14px;border-radius:18px;background:rgba(246,243,247,.86);}
+.photo-mode-title{font-size:12px;opacity:.55;margin-bottom:10px}
+.photo-mode-options{display:flex;gap:8px}
+.mode-option{flex:1;padding:12px 10px;border-radius:14px;background:#fff;border:1px solid #e7e2e9;display:flex;align-items:center;justify-content:center;gap:7px;font-size:13px}
+.mode-option.active{background:#17151a;color:#fff;border-color:#17151a}
+.mode-icon{font-size:15px}
+.mode-note{font-size:10px;line-height:1.5;opacity:.42;margin-top:9px}
+
+.jar-head{display:flex;justify-content:space-between;align-items:end;margin:8px 4px 10px}
+.jar-title{font-size:22px;font-weight:600}
+.jar-count{font-size:12px;opacity:.5}
+.jar-nav{display:flex;align-items:center;justify-content:space-between;margin:0 3px 14px}
+.jar-week-btn{padding:10px 18px;border-radius:999px;background:rgba(255,255,255,.76);font-size:12px}
+.glass-jar{position:relative;width:min(100%,520px);height:58vh;min-height:430px;max-height:680px;margin:0 auto 14px;border-radius:42px 42px 54px 54px;background:linear-gradient(90deg,rgba(255,255,255,.34),rgba(255,255,255,.08) 15%,rgba(255,255,255,.05) 75%,rgba(255,255,255,.28));border:2px solid rgba(255,255,255,.62);box-shadow:inset 0 0 0 1px rgba(90,80,100,.08),inset 12px 0 25px rgba(255,255,255,.25),inset -12px 0 25px rgba(120,110,130,.08),0 18px 35px rgba(50,40,60,.10);overflow:hidden}
+.jar-rim{position:absolute;left:6%;right:6%;top:8px;height:24px;border-radius:50%;border:2px solid rgba(255,255,255,.58);background:rgba(255,255,255,.16);box-shadow:0 4px 10px rgba(40,30,50,.08);z-index:3}
+.jar-glass-shine{position:absolute;top:5%;bottom:8%;left:7%;width:12%;border-radius:50%;background:linear-gradient(to bottom,rgba(255,255,255,.50),rgba(255,255,255,.04));filter:blur(2px);z-index:4;pointer-events:none}
+.jar-body{position:absolute;inset:8% 5% 6%;overflow:hidden}
+.jar-bottom{position:absolute;left:7%;right:7%;bottom:5px;height:34px;border-radius:50%;border:2px solid rgba(255,255,255,.36);background:rgba(255,255,255,.09)}
+.jar-sticker{position:absolute;max-width:92px;max-height:92px;width:auto;height:auto;object-fit:contain;filter:drop-shadow(0 4px 5px rgba(30,25,35,.14));user-select:none}
+.jar-empty{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;text-align:center;padding:40px;font-size:13px;line-height:1.7;opacity:.34}
+.jar-hint{font-size:11px;line-height:1.6;text-align:center;opacity:.38;padding:0 24px 20px}
+@media(max-width:430px){.glass-jar{min-height:390px;height:54vh}.jar-sticker{max-width:76px;max-height:76px}}
+
+/* 时间背景 */
+body.time-morning{
+ background:linear-gradient(135deg,#edf7fc 0%,#f7fbfd 50%,#eaf5fb 100%);
+}
+
+body.time-day{
+ background:linear-gradient(135deg,#fff8ed 0%,#fffaf4 50%,#fff0dc 100%);
+}
+
+body.time-evening{
+ background:linear-gradient(135deg,#fff1f3 0%,#fff8f8 50%,#fbecef 100%);
+}
+
+body.time-night{
+ background:linear-gradient(135deg,#f4eef9 0%,#f8f4fb 50%,#eee8f5 100%);
+}
+
+body.time-late{
+ background:linear-gradient(135deg,#f0f1f2 0%,#f7f7f7 50%,#e9eaec 100%);
+}
+
+/* 文字 + 图片左右布局 */
+.media-layout{
+ display:grid;
+ grid-template-columns:minmax(0,1fr) minmax(0,2fr);
+ gap:16px;
+ align-items:center;
+ margin-top:2px;
+}
+
+.media-layout .memory-text{
+ min-width:0;
+ word-break:break-word;
+}
+
+.media-layout .photo{
+ width:100%;
+ height:220px;
+ max-height:320px;
+ object-fit:cover;
+ margin:0;
+ cursor:zoom-in;
+ border-radius:18px;
+ display:block;
+}
+
+.photo{
+ width:100%;
+ border-radius:18px;
+ display:block;
+ margin:0 0 15px;
+ max-height:420px;
+ object-fit:cover;
+}
+
+.photo-only{
+ cursor:zoom-in;
+}
+
+/* 图片放大层 */
+.image-lightbox{
+ display:none;
+ position:fixed;
+ inset:0;
+ z-index:20;
+ background:rgba(0,0,0,.86);
+ align-items:center;
+ justify-content:center;
+ padding:22px;
+ opacity:0;
+ transition:opacity .18s ease;
+}
+
+.image-lightbox.show{
+ display:flex;
+ opacity:1;
+}
+
+.image-lightbox img{
+ max-width:100%;
+ max-height:100%;
+ object-fit:contain;
+ border-radius:12px;
+}
+
+@media(max-width:430px){
+ .media-layout{
+  grid-template-columns:minmax(0,1fr) minmax(0,2fr);
+  gap:12px;
+ }
+
+ .media-layout .photo{
+  height:190px;
+ }
+
+ .media-layout .memory-text{
+  font-size:14px;
+  line-height:1.6;
+ }
+}
+
+#startupSplash{position:fixed;inset:0;z-index:9999;background:#f3f0f8;display:flex;align-items:center;justify-content:center;transition:opacity .2s ease}#startupSplash.hide{opacity:0;pointer-events:none}.startupSplashTitle{font-size:24px;letter-spacing:.02em;font-weight:500;color:#17151a}
 </style>
 </head>
+
 <body>
 
-<div class="tab-bar">
-    <button class="tab-btn active" data-view="studyView">顺序刷题模式</button>
-    <button class="tab-btn" data-view="cardView">卡片检索模式</button>
+<div id="startupSplash" aria-label="future 启动封面"><div class="startupSplashTitle">future</div></div>
+
+<div class="app">
+
+<header>
+ <div>
+  <div class="logo">future</div>
+  <div class="sub">a little message from yourself</div>
+ </div>
+
+ <button class="more" onclick="openSettings()" aria-label="设置" title="设置">
+  <span></span><span></span><span></span>
+ </button>
+</header>
+
+<main id="chance" class="page active">
+
+ <section id="memory"></section>
+
+ <section class="card today">
+  <div class="label">TODAY</div>
+  <div class="memory-title">今天，想留下一点什么？</div>
+
+  <textarea
+   id="todayText"
+   placeholder="写下一句话，或者留一张照片。"
+  ></textarea>
+
+  <div class="actions">
+   <button class="pill" onclick="saveToday()">留下</button>
+   <button class="pill light" onclick="openEditor()">添加照片</button>
+  </div>
+ </section>
+
+ <section id="recent" class="record-list"></section>
+
+</main>
+
+<main id="calendar" class="page">
+
+ <div class="monthbar">
+  <button class="arrow" onclick="changeMonth(-1)">‹</button>
+  <div class="month" id="monthTitle"></div>
+  <button class="arrow" onclick="changeMonth(1)">›</button>
+ </div>
+
+ <div class="week">
+  <div>一</div>
+  <div>二</div>
+  <div>三</div>
+  <div>四</div>
+  <div>五</div>
+  <div>六</div>
+  <div>日</div>
+ </div>
+
+ <div id="cal" class="calendar"></div>
+
+</main>
+
+<main id="jar" class="page">
+ <section class="jar-head">
+  <div>
+   <div class="label">WEEKLY STICKER JAR</div>
+   <div class="jar-title" id="jarTitle"></div>
+  </div>
+  <div class="jar-count" id="jarCount">0 张</div>
+ </section>
+ <div class="jar-nav">
+  <button class="arrow" onclick="changeJarWeek(-1)">‹</button>
+  <button class="jar-week-btn" id="jarWeekLabel" onclick="jumpToCurrentWeek()">本周</button>
+  <button class="arrow" onclick="changeJarWeek(1)">›</button>
+ </div>
+ <section class="glass-jar" id="glassJar">
+  <div class="jar-glass-shine"></div>
+  <div class="jar-rim"></div>
+  <div class="jar-body" id="jarBody"></div>
+  <div class="jar-bottom"></div>
+ </section>
+ <div class="jar-hint">每周重新开始。你留下的每一张贴纸，都会落进这一周的玻璃罐里。</div>
+</main>
+
 </div>
 
-<!-- 模式1：顺序刷题 -->
-<div id="studyView" class="view active">
-    <div class="index-text">
-        <span id="pageInfo"></span>
-    </div>
-    <div class="card">
-        <div class="question" id="qText"></div>
-        <div class="answer" id="aText"></div>
-    </div>
-    <div class="btn-wrap">
-        <button class="btn-prev" id="prevBtn">上一题</button>
-        <button class="btn-show" id="showBtn">显示/隐藏答案</button>
-        <button class="btn-next" id="nextBtn">下一题</button>
-    </div>
+<nav class="bottom">
+
+ <button
+  class="nav active"
+  id="navChance"
+  onclick="showPage('chance')"
+ >
+  偶然
+ </button>
+
+ <button
+  class="nav"
+  id="navCalendar"
+  onclick="showPage('calendar')"
+ >
+  日历
+ </button>
+
+ <button
+  class="nav"
+  id="navJar"
+  onclick="showPage('jar')"
+ >
+  贴纸罐
+ </button>
+
+</nav>
+
+
+<!-- 编辑窗口 -->
+
+<div id="editor" class="overlay">
+
+ <div class="sheet">
+
+  <div class="sheethead">
+   <strong id="editorTitle">留下一件事</strong>
+   <button class="close" onclick="closeEditor()">×</button>
+  </div>
+
+  <div class="field">
+   <input id="editDate" type="date">
+  </div>
+
+  <div class="field">
+   <textarea
+    id="editText"
+    placeholder="写点什么……"
+   ></textarea>
+  </div>
+
+  <img
+   id="preview"
+   class="preview"
+   style="display:none"
+  >
+
+  <div id="photoMode" class="photo-mode" style="display:none">
+   <div class="photo-mode-title">照片怎么留下？</div>
+   <div class="photo-mode-options">
+    <button type="button" id="modeOriginal" class="mode-option active" onclick="setPhotoMode('original')">
+     <span class="mode-icon">▣</span><span>保留原图</span>
+    </button>
+    <button type="button" id="modeSticker" class="mode-option" onclick="setPhotoMode('sticker')">
+     <span class="mode-icon">✦</span><span>裁成贴纸</span>
+    </button>
+   </div>
+   <div class="mode-note">贴纸会自动裁剪主体、加白色描边，并收进对应周的玻璃罐。</div>
+  </div>
+
+  <div class="actions">
+
+   <button
+    class="iconbtn"
+    onclick="document.getElementById('photoInput').click()"
+    aria-label="添加照片"
+    title="添加照片"
+   >
+    <svg viewBox="0 0 18 18">
+     <rect x="3" y="3" width="12" height="12" rx="2"/>
+     <circle cx="6.5" cy="6.5" r="1.2"/>
+     <path d="m4.5 13 3.2-3.2 2.3-1.5 2 2.5"/>
+    </svg>
+   </button>
+
+   <button
+    class="iconbtn dark"
+    onclick="saveEditor()"
+    aria-label="保存"
+    title="保存"
+   >
+    <svg viewBox="0 0 18 18">
+     <path d="M4 3.5h8l2 2V15H4z"/>
+     <path d="M6.5 3.5v4h5v-4M6.5 15v-4h5v4"/>
+    </svg>
+   </button>
+
+  </div>
+
+  <input
+   id="photoInput"
+   type="file"
+   accept="image/*"
+   capture="environment"
+   style="display:none"
+   onchange="loadPhoto(event)"
+  >
+
+ </div>
+
 </div>
 
-<!-- 模式2：卡片检索（可搜索，点击展开答案） -->
-<div id="cardView" class="view">
-    <input class="search-input" id="searchInput" placeholder="🔍输入名词快速搜索，例如：营造法式">
-    <div id="cardList"></div>
+
+<!-- 查看窗口 -->
+
+<div id="viewer" class="overlay">
+
+ <div class="sheet">
+
+  <div class="sheethead">
+   <strong id="viewDate"></strong>
+   <button class="close" onclick="closeViewer()">×</button>
+  </div>
+
+  <div id="viewContent"></div>
+
+  <div class="iconrow">
+
+   <button
+    class="iconbtn"
+    onclick="editCurrent()"
+    aria-label="编辑"
+    title="编辑"
+   >
+    <svg viewBox="0 0 18 18">
+     <path d="M3.5 13.8V16h2.2L14.8 6.9l-2.2-2.2-9.1 9.1ZM11.5 6.2l2.2 2.2"/>
+    </svg>
+   </button>
+
+   <button
+    class="iconbtn"
+    onclick="deleteCurrent()"
+    aria-label="删除"
+    title="删除"
+   >
+    <svg viewBox="0 0 18 18">
+     <path d="M4 5h10M7 5V3.5h4V5M5 5l.7 10h6.6L13 5M7.5 8v4.5M10.5 8v4.5"/>
+    </svg>
+   </button>
+
+  </div>
+
+ </div>
+
+</div>
+
+
+<!-- 设置窗口 -->
+
+<div id="settings" class="overlay">
+
+ <div class="sheet">
+
+  <div class="sheethead">
+   <strong>设置</strong>
+   <button class="close" onclick="closeSettings()">×</button>
+  </div>
+
+  <div
+   class="setting-row"
+   onclick="exportData()"
+  >
+   <div>
+    <div class="setting-name">导出日志</div>
+    <div class="setting-desc">保存 future 日志备份</div>
+   </div>
+
+   <svg viewBox="0 0 18 18">
+    <path d="M9 12V3M6 6l3-3 3 3M4 10v4h10v-4"/>
+   </svg>
+  </div>
+
+  <div
+   class="setting-row"
+   onclick="document.getElementById('importInput').click()"
+  >
+   <div>
+    <div class="setting-name">导入日志</div>
+    <div class="setting-desc">从 JSON 文件恢复日志</div>
+   </div>
+
+   <svg viewBox="0 0 18 18">
+    <path d="M9 6v9M6 12l3 3 3-3M4 4h10v4"/>
+   </svg>
+  </div>
+
+  <!-- 这里明确是文件，不是图片 -->
+  <input
+   id="importInput"
+   type="file"
+   accept=".json,application/json"
+   style="display:none"
+   onchange="importData(event)"
+  >
+
+  <div
+   class="setting-row"
+   onclick="installApp()"
+  >
+   <div>
+    <div class="setting-name">添加到桌面</div>
+    <div class="setting-desc">将 future 安装到设备</div>
+   </div>
+
+   <svg viewBox="0 0 18 18">
+    <path d="M9 3v12M3 9h12"/>
+   </svg>
+  </div>
+
+ </div>
+
+</div>
+
+
+<!-- 图片放大 -->
+
+<div
+ id="imageLightbox"
+ class="image-lightbox"
+ onclick="closeLightbox(event)"
+>
+ <img id="lightboxImage" src="" alt="">
 </div>
 
 
 <script>
-//题库
-let questionBank = [
-{"q":"鲁班","a":"春秋时期建筑工匠。姓公输,名般,鲁国人。被中国建筑工匠尊为“祖师”。"},
-{"q":"伍子胥","a":"春秋末期楚国人,为吴王阖闾相土尝水,营阖闾城。"},
-{"q":"李冰父子","a":"战国时代著名的水利工程专家。主持都江堰排灌水工程。其指导思想是道家的“道法自然”、“天人合一”的思想。"},
-{"q":"阳城延","a":"西汉哲匠。先后主持建造长乐宫、未央宫、长安城等项目。"},
-{"q":"杨衒之","a":"北魏散文家。著《洛阳伽蓝记》一书,记录洛阳及城郊诸大寺园林建寺缘由、兴衰梗概、建筑结构,还记载了人文地理、风俗习惯、传闻掌故。"},
-{"q":"宇文恺","a":"隋代城市规划和建筑工程的专家,营随新都大兴城、东都洛阳城、仁寿宫等。大兴城的规划是古代城市建设史上最有代表性的成功范例之一。还用1:100比例制作“明堂”的图样和木模型。"},
-{"q":"李春","a":"隋代著名工匠,技艺高超,代表作是位于河北赵县的安济桥。该桥是一座敞肩拱桥,以它的结构和外形的完美融合而闻名。"},
-{"q":"喻皓","a":"北宋都料匠,总结前人和自己经验编著《木经》。我国第一部木结构建筑手册。"},
-{"q":"李诫","a":"北宋著名建筑学家,编写了《营造法式》,是我国古代最完整的建筑技术书籍。"},
-{"q":"样式雷","a":"在清代宫廷建筑设计机构“样式房”供役时间最长的雷氏家族,参与建造了清朝许多皇家建筑。人称“样式雷”。"},
-{"q":"计成","a":"字无否,号无否道人,明末造园家,著有造园著作《园冶》,是我国首部完整的造园理论著述。提出“虽由人作,宛自天开”的审美标准。"},
-{"q":"朱启钤","a":"中国政治家、实业家、古建筑学家。建立了最早的研究中国建筑文化遗产的学术团体中国营造学社。"},
-{"q":"梁思成","a":"近现代建筑史学家,营造学社法式部主任,创办东北大学、清华建筑系,著《清式营造则例》《中国建筑史》。参与国徽、人民英雄纪念碑设计。"},
-{"q":"刘敦桢","a":"近现代建筑史学家,营造学社文献部主任,中国古建筑研究开拓者。"},
-{"q":"杨廷宝","a":"近现代建筑设计开拓者,代表作北京和平宾馆、国民党党史陈列馆。"},
-{"q":"吕彦直","a":"民国建筑师,代表作南京中山陵、广州中山纪念堂。"},
-{"q":"王澍","a":"普利兹克奖得主,代表作中国美术学院象山校区、宁波美术馆。"},
-{"q":"刘家琨","a":"建筑师,提出低技策略,代表作西村大院、鹿野苑石刻博物馆。"},
-{"q":"张永和","a":"非常建筑主持建筑师,注重建筑原型设计,代表作垂直玻璃住宅。"},
-{"q":"《考工记》","a":"战国成书，我国古代城市规划著作，匠人营国，方九里，旁三门。左祖右社，面朝后市。中国最早都城规划学说。"},
-{"q":"《木经》","a":"北宋喻皓著，我国历史上第一部木结构建筑手册。"},
-{"q":"《营造法式》","a":"北宋李诫编修，王安石改革产物，宋代官式建筑技术典籍，确立材份模数制度，附图样。"},
-{"q":"《园冶》","a":"明末计成，我国第一部完整造园理论著作，核心：虽由人作，宛自天开。"},
-{"q":"《工程做法则例》","a":"清雍正颁布，清代官式建筑标准，确立斗口模数。"},
-{"q":"《清式营造则例》","a":"梁思成著作，系统梳理清代官式建筑。"},
-{"q":"大木作","a":"木构架建筑主体部分，由柱、梁、枋、檩组成，决定建筑尺度形体。"},
-{"q":"小木作","a":"又称装修，分外檐装修、内檐装修，门窗、隔断、罩、藻井天花等。"},
-{"q":"斗拱（铺作）","a":"中国木构特有构件，斗、拱、昂组合；传递屋顶荷载到柱子；等级象征，尺度模数。宋称铺作。"},
-{"q":"偷心造","a":"宋斗拱跳头上不置横拱。"},
-{"q":"计心造","a":"宋斗拱跳头上安放横拱。"},
-{"q":"叉柱造","a":"上下层柱交接，上层柱底十字开口，插入下层斗拱，向内退半柱径，实例独乐寺观音阁。"},
-{"q":"缠柱造","a":"下层柱增设斜梁承托上层柱，转角增设补间铺作。"},
-{"q":"举折","a":"宋代屋顶坡度做法，先定脊高度，自上而下逐架折，形成屋面曲线。"},
-{"q":"举架","a":"清代屋顶做法，自下而上，坡度逐渐变陡。"},
-{"q":"生起","a":"宋辽檐柱由当心间向两端柱子升高，檐口呈柔和曲线。"},
-{"q":"侧脚","a":"一圈檐柱柱脚外撇，柱头向内收，增加构架内聚力，明代后少用。"},
-{"q":"卷杀","a":"木构件端部切削成柔和曲线轮廓，用于拱、梁、柱。"},
-{"q":"推山","a":"庑殿屋顶做法，正脊向两端推出，垂脊变为柔和曲线。"},
-{"q":"收山","a":"歇山顶山花从檐柱中线向内收进，减小屋顶体量。"},
-{"q":"彻上明造","a":"不设天花，梁架全部暴露。厅堂型建筑常用。"},
-{"q":"副阶周匝","a":"殿身、塔身外围环绕一圈外廊，实例应县木塔，晋祠圣母殿。"},
-{"q":"金厢斗底槽","a":"宋殿阁柱网，内外两圈柱子，外层包围内层，实例佛光寺大殿。"},
-{"q":"分心斗底槽","a":"一列中柱把建筑分为前后两部分，多用于门殿，独乐寺山门。"},
-{"q":"单槽","a":"内柱划分平面为大小不等两区，晋祠圣母殿。"},
-{"q":"双槽","a":"内柱将平面划分为大小不等三区。"},
-{"q":"抬梁式","a":"叠梁式，柱上架梁，梁上短柱再承梁，室内少柱，官式北方多用，耗材大。"},
-{"q":"穿斗式","a":"枋串联柱子，檩直接搁柱头，柱密，抗风好，南方民居多用。"},
-{"q":"干阑式","a":"底层架空，上层住人，防潮防虫兽，南方少数民族。"},
-{"q":"井干式","a":"木材层层相叠，既是围护又是承重。"},
-{"q":"庑殿顶（四阿顶）","a":"最高等级屋顶，四面坡，五条脊，重檐庑殿等级最高。实例佛光寺大殿。"},
-{"q":"歇山顶（九脊殿）","a":"等级第二，正脊+四垂脊+四戗脊。"},
-{"q":"悬山顶","a":"两坡顶，屋檐伸出山墙外保护山墙防水。"},
-{"q":"硬山顶","a":"两坡，屋面不伸出山墙。"},
-{"q":"攒尖顶","a":"无正脊，垂脊汇聚顶部宝顶，亭、塔多用。"},
-{"q":"盔顶","a":"无正脊，垂脊上凸下凹，轮廓似头盔。"},
-{"q":"盝顶","a":"四条正脊围成平顶，下接庑殿。"},
-{"q":"和玺彩画","a":"清彩画最高等级，龙凤题材，大量贴金，用于主殿。"},
-{"q":"旋子彩画","a":"等级第二，旋花瓣，官衙庙宇次殿。"},
-{"q":"苏式彩画","a":"等级最低，园林民居，山水花鸟故事，少用金。"},
-{"q":"须弥座","a":"高级台基，多层砖石叠砌，宫殿坛庙。"},
-{"q":"藻井","a":"室内顶棚向上凹进的井状装饰，宫殿庙宇重要位置。"},
-{"q":"抱厦","a":"主体建筑侧面突出的小房间，丁字相交。"},
-{"q":"雀替","a":"梁枋与柱相交的短木，减小梁净跨，也可装饰。花牙子为纯装饰雀替。"},
-{"q":"驼峰","a":"彻上明造梁架，承托梁袱，似骆驼脊背。"},
-{"q":"影壁（照壁、萧墙）","a":"四合院大门内外，遮挡视线，烘托气势。"},
-{"q":"垂花门","a":"四合院二门，檐柱不落地，屋顶勾连搭。"},
-{"q":"宝城宝顶","a":"明清帝陵，地宫之上圆形土丘宝顶，外围城墙宝城。明孝陵首创。"},
-{"q":"方上","a":"汉代帝陵封土，截顶方锥形夯土堆，茂陵。"},
-{"q":"黄肠题凑","a":"汉代帝王陵，柏木段垒墓室，木头端头向内。"},
-{"q":"兆域图","a":"战国中山王墓出土，世界现存最早总平面墓图。"},
-{"q":"明楼","a":"明代陵墓独创，陵前高楼，碑亭。"},
-{"q":"五音姓利","a":"宋代堪舆，赵属角音，墓地东南高西北低，宋陵南高北低。"},
-{"q":"舍宅为寺","a":"南北朝风尚，贵族捐住宅作佛寺，前厅为佛殿后堂讲堂。"},
-{"q":"佛光寺大殿","a":"唐大中十一年，五台山，现存最大唐代木构，金厢斗底槽，斗拱宏大，出檐深远。"},
-{"q":"南禅寺大殿","a":"山西五台山，我国现存最早完整唐代木构。"},
-{"q":"应县佛宫寺释迦塔","a":"辽代，国内现存最古老完整木塔；明五暗四八角，金厢斗底槽，叉柱造。"},
-{"q":"嵩岳寺塔","a":"北魏，河南登封，我国现存最早砖塔，十二边形密檐塔。"},
-{"q":"乾陵","a":"唐高宗武则天合葬，唐代依山为陵代表，利用双峰做阙。"},
-{"q":"十三陵","a":"明代帝王陵墓群，北京天寿山；共用一条神道，以长陵为中心。"},
-{"q":"唐长安城","a":"里坊制典范，棋盘格局，东西两市，宵禁。"},
-{"q":"宋东京（开封）","a":"取消里坊围墙，开放街巷制，夜市，瓦肆。"},
-{"q":"元大都","a":"刘秉忠规划，棋盘格局，郭守敬通惠河。"},
-{"q":"明清北京城","a":"完整体现考工记思想，7.5km中轴线，左祖右社，前朝后寝。"},
-{"q":"左祖右社","a":"考工记，都城东侧太庙祭祖，西侧社稷坛祭土地五谷。"},
-{"q":"里坊制","a":"古代城市管理模式，封闭坊墙，定时开闭，宵禁，唐长安典型。"},
-{"q":"四合院","a":"北京传统民居，中轴对称，入口东南角，倒座、垂花门、正房厢房。"},
-{"q":"福建土楼","a":"客家民居，夯土厚墙，祠堂为中心，圆楼方楼。"},
-{"q":"虽由人作，宛自天开","a":"计成《园冶》，中国古典园林核心审美，人工营造宛若天然。"},
-{"q":"借景","a":"古典造园手法，将园外景色引入视线，扩大空间层次。"},
-{"q":"TOD模式","a":"以公共交通为导向开发，最大化公交使用。"},
-{"q":"TND模式","a":"传统邻里开发，5分钟步行邻里单元。"},
-{"q":"SOD模式","a":"社会服务设施引导开发，行政公共设施带动新区地价。"},
-{"q":"CBD","a":"中央商务区，城市金融商务高度集中区域。"},
-{"q":"景观都市主义","a":"把城市视作生态体系，景观基础设施作为自然人文过程载体。"},
-{"q":"广义建筑学","a":"吴良镛提出，整合建筑、地景、城市规划，面向人居环境。"},
-{"q":"人居环境科学","a":"吴良镛，综合多学科研究人类聚居。"},
-{"q":"北京宪章","a":"1999世界建筑师大会，吴良镛起草，21世纪建筑学纲领。"},
-{"q":"场所精神","a":"场所整体气氛，人与环境关系，空间承载文化记忆。"},
-{"q":"图底关系","a":"格式塔心理学，实体建筑为图，开敞空间为底。"},
-{"q":"认知地图","a":"凯文林奇，城市意向五要素：道路、边界、区域、节点、标志物。"},
-{"q":"D/H","a":"街道宽度与建筑高度比值，D/H=1匀称；>1疏离；<1压迫。"},
-{"q":"城市更新","a":"有计划改造衰败旧城区，改善环境。"},
-{"q":"棕地","a":"存在潜在污染的场地，需要修复再开发。"},
-{"q":"海绵城市","a":"水弹性城市，提升城市应对雨水洪涝的弹性。"},
-{"q":"格式塔","a":"完形心理学，整体大于局部之和。"},
-{"q":"城市设计导则","a":"规范化可操作的城市设计控制纲要。"},
-{"q":"开放空间","a":"城市公共外部空间，广场绿地公园，可开放中庭。"},
-{"q":"文脉","a":"历史文化传统，通过物质空间转译。"},
-{"q":"希波丹姆模式","a":"古希腊方格网城市，广场为中心，米列都城。"},
-{"q":"营寨城","a":"古罗马被征服城市，方正十字街道，军事防御。"},
-{"q":"《建筑十书》","a":"维特鲁威，古罗马，提出建筑三要素：实用、坚固、美观。"},
-{"q":"帆拱","a":"拜占庭结构，方形平面过渡圆形穹顶。圣索菲亚大教堂。"},
-{"q":"飞扶壁","a":"哥特建筑，平衡拱顶侧推力，凌空半拱。"},
-{"q":"骨架券","a":"哥特拱顶，拱承重，填充部分减重。"},
-{"q":"巴西利卡","a":"古罗马公共大厅，中厅高侧廊低，基督教教堂原型。"},
-{"q":"拉丁十字平面","a":"教堂，纵向长，祭坛在端头。"},
-{"q":"希腊十字平面","a":"四臂等长，集中式教堂。"},
-{"q":"帕拉第奥母题","a":"帕拉迪奥，大开间内套小券拱，大小柱组合。"},
-{"q":"券柱式","a":"古罗马，拱券+装饰性壁柱，柱不承重。"},
-{"q":"CIAM国际现代建筑协会","a":"现代建筑组织，出台雅典宪章，后期解散。"},
-{"q":"雅典宪章","a":"1933，四大功能：居住、工作、游憩、交通，功能分区。"},
-{"q":"田园城市","a":"霍华德，城乡结合理想城市。"},
-{"q":"新建筑五点","a":"柯布西耶：底层架空、自由平面、自由立面、横向长窗、屋顶花园。"},
-{"q":"少就是多","a":"密斯凡德罗，简约，重视构造细部。"},
-{"q":"装饰就是罪恶","a":"阿道夫路斯，反对多余装饰。"},
-{"q":"粗野主义","a":"柯布西耶，暴露粗糙混凝土模板痕迹，马赛公寓。"},
-{"q":"高技派","a":"暴露结构设备，蓬皮杜中心。"},
-{"q":"场所理论","a":"空间赋予人文意义转化为场所。"},
-{"q":"连接理论","a":"现代城市设计三大理论之一，注重空间联系。"},
-{"q":"城市肌理","a":"城市物质形体特征，街区建筑尺度组合。"},
-{"q":"城市再生","a":"城市新陈代谢，协调新旧保护发展。"},
-{"q":"GIS地理信息系统","a":"地理数据采集存储分析可视化。"},
-{"q":"建筑类型学","a":"追溯建筑原型，类型演绎设计。"},
-{"q":"天际线","a":"建筑以天空为背景的轮廓剪影。"},
-{"q":"城市建筑综合体","a":"多种城市功能组合，互相依存。"},
-{"q":"紧凑城市","a":"适度高密度，优先公共交通，集约利用土地。"}
-];
 
-// --------标签切换逻辑
-const tabBtns = document.querySelectorAll('.tab-btn');
-const views = document.querySelectorAll('.view');
-tabBtns.forEach(btn=>{
-    btn.onclick = function(){
-        const targetId = this.getAttribute('data-view');
-        tabBtns.forEach(b=>b.classList.remove('active'));
-        this.classList.add('active');
-        views.forEach(v=>v.classList.remove('active'));
-        document.getElementById(targetId).classList.add('active');
-    }
-})
+const KEY='futurism-records-v2';
 
-// --------刷题模式逻辑
-let current = 0;
-const qDom = document.getElementById('qText');
-const aDom = document.getElementById('aText');
-const pageDom = document.getElementById('pageInfo');
+let records=JSON.parse(localStorage.getItem(KEY)||'[]');
 
-function renderStudy(){
-    let item = questionBank[current];
-    qDom.innerText = item.q;
-    aDom.innerText = item.a;
-    aDom.style.display = 'none';
-    pageDom.innerText = `${current+1} / ${questionBank.length}`;
+let currentMonth=new Date();
+currentMonth.setDate(1);
+
+let editingId=null;
+let viewingId=null;
+let tempPhoto='';
+let tempPhotoMode='original';
+let jarWeekOffset=0;
+
+let lastToday='';
+
+
+function persist(){
+ localStorage.setItem(KEY,JSON.stringify(records));
+ if(document.getElementById('jar')?.classList.contains('active')) renderJar();
 }
 
-document.getElementById('showBtn').onclick = function(){
-    aDom.style.display = aDom.style.display === 'block' ? 'none' : 'block';
+
+function todayISO(){
+
+ const d=new Date();
+
+ return d.getFullYear()
+  +'-'
+  +String(d.getMonth()+1).padStart(2,'0')
+  +'-'
+  +String(d.getDate()).padStart(2,'0');
+
 }
-document.getElementById('nextBtn').onclick = function(){
-    if(current < questionBank.length -1) current++;
-    renderStudy();
-}
-document.getElementById('prevBtn').onclick = function(){
-    if(current > 0) current--;
-    renderStudy();
-}
-renderStudy();
 
 
-// --------卡片检索模式逻辑
-const cardList = document.getElementById('cardList');
-const searchInput = document.getElementById('searchInput');
+function todayISODate(d){
 
-function renderCardList(list){
-    cardList.innerHTML = '';
-    list.forEach((obj,idx)=>{
-        const div = document.createElement('div');
-        div.className = 'card-item';
-        div.innerHTML = `
-            <div class="card-item-title" data-idx="${idx}">📖 ${obj.q}</div>
-            <div class="card-item-ans">${obj.a}</div>
-        `;
-        const titleDom = div.querySelector('.card-item-title');
-        const ansDom = div.querySelector('.card-item-ans');
-        titleDom.onclick = ()=>{
-            ansDom.style.display = ansDom.style.display === 'block' ? 'none' : 'block';
-        }
-        cardList.appendChild(div);
-    })
+ return d.getFullYear()
+  +'-'
+  +String(d.getMonth()+1).padStart(2,'0')
+  +'-'
+  +String(d.getDate()).padStart(2,'0');
+
 }
 
-//搜索过滤
-searchInput.oninput = function(){
-    let kw = this.value.trim().toLowerCase();
-    if(!kw){
-        renderCardList(questionBank);
-        return;
-    }
-    let filter = questionBank.filter(x=> x.q.toLowerCase().includes(kw) || x.a.toLowerCase().includes(kw));
-    renderCardList(filter);
+
+function fmt(d){
+
+ return d.replaceAll('-','.');
+
 }
-//初始化渲染全部卡片
-renderCardList(questionBank);
+
+
+function setTimeTheme(){
+
+ const h=new Date().getHours();
+
+ document.body.classList.remove(
+  'time-morning',
+  'time-day',
+  'time-evening',
+  'time-night',
+  'time-late'
+ );
+
+ document.body.classList.add(
+  h>=6&&h<10
+   ?'time-morning'
+   :h>=10&&h<16
+   ?'time-day'
+   :h>=16&&h<20
+   ?'time-evening'
+   :h>=20&&h<24
+   ?'time-night'
+   :'time-late'
+ );
+
+}
+
+
+function esc(s){
+
+ return String(s).replace(
+  /[&<>"']/g,
+  c=>({
+   '&':'&amp;',
+   '<':'&lt;',
+   '>':'&gt;',
+   '"':'&quot;',
+   "'":'&#39;'
+  }[c])
+ );
+
+}
+
+
+/* 文字 + 图片统一左右布局 */
+
+function mediaHtml(r){
+
+ const text=r.text
+  ?'<div class="memory-text">'+esc(r.text)+'</div>'
+  :'';
+
+ const photo=r.photo
+  ?'<img class="photo" src="'+r.photo+'" onclick="openLightbox(this.src,event)" alt="">'
+  :'';
+
+ if(r.photo&&r.text){
+
+  return '<div class="media-layout">'
+   +text
+   +photo
+   +'</div>';
+
+ }
+
+ if(r.photo){
+
+  return '<img class="photo photo-only" src="'+r.photo+'" onclick="openLightbox(this.src,event)" alt="">';
+
+ }
+
+ return text;
+
+}
+
+
+/* 图片放大 */
+
+function openLightbox(src,e){
+
+ if(e)e.stopPropagation();
+
+ document.getElementById('lightboxImage').src=src;
+
+ document
+  .getElementById('imageLightbox')
+  .classList.add('show');
+
+}
+
+
+function closeLightbox(e){
+
+ const box=document.getElementById('imageLightbox');
+
+ if(e&&e.target!==box)return;
+
+ box.classList.remove('show');
+
+ document.getElementById('lightboxImage').src='';
+
+}
+
+
+/* 页面切换 */
+
+function showPage(id){
+
+ document
+  .querySelectorAll('.page')
+  .forEach(x=>x.classList.remove('active'));
+
+ document
+  .getElementById(id)
+  .classList.add('active');
+
+ document
+  .querySelectorAll('.nav')
+  .forEach(x=>x.classList.remove('active'));
+
+ document
+  .getElementById(
+   id==='chance'
+    ?'navChance'
+    :id==='calendar'?'navCalendar':'navJar'
+  )
+  .classList.add('active');
+
+ if(id==='calendar'){
+  renderCalendar();
+ }else if(id==='jar'){
+  renderJar();
+ }else{
+  renderChance();
+ }
+
+}
+
+
+/* 偶然 */
+
+function renderChance(){
+
+ const box=document.getElementById('memory');
+
+ const past=records.filter(
+  r=>r.date<todayISO()
+ );
+
+ if(!past.length){
+
+  box.innerHTML=
+   '<div class="card empty">'
+   +'还没有来自过去的消息。<br>'
+   +'先留下一点，未来再偶然遇见。'
+   +'</div>';
+
+ }else{
+
+  const fromKey='futurism-from-'+todayISO();
+ let savedId=localStorage.getItem(fromKey);
+ let r=past.find(x=>String(x.id)===String(savedId));
+ if(!r){
+  r=past[Math.floor(Math.random()*past.length)];
+  localStorage.setItem(fromKey,String(r.id));
+ }
+
+  box.innerHTML=
+   '<div class="card">'
+   +'<div class="label">FROM</div>'
+   +'<div class="date">'+fmt(r.date)+'</div>'
+   +mediaHtml(r)
+   +'<div class="small-actions">'
+   +'<button onclick="openViewer(\''+r.id+'\')">查看</button>'
+   +'</div>'
+   +'</div>';
+
+ }
+
+
+ /* 最近五个自然日 */
+
+ const recent=document.getElementById('recent');
+
+ const today=
+  new Date(todayISO()+'T00:00:00');
+
+ const cutoff=new Date(today);
+
+ cutoff.setDate(
+ cutoff.getDate()-4
+ );
+
+ const minDate=todayISODate(cutoff);
+
+ const rs=[...records]
+  .filter(
+   r=>r.date>=minDate&&r.date<=todayISO()
+  )
+  .sort(
+   (a,b)=>b.date.localeCompare(a.date)
+  );
+
+ recent.innerHTML=rs.length
+  ?'<div class="label" style="margin:25px 4px 10px">RECENT</div>'
+   +rs.map(
+    r=>
+     '<div class="card">'
+     +'<div class="date">'+fmt(r.date)+'</div>'
+     +mediaHtml(r)
+     +'<div class="small-actions">'
+     +'<button onclick="openViewer(\''+r.id+'\')">查看</button>'
+     +'</div>'
+     +'</div>'
+   ).join('')
+  :'';
+
+}
+
+
+/* 日历 */
+
+function renderCalendar(){
+
+ const y=currentMonth.getFullYear();
+ const m=currentMonth.getMonth();
+
+ document.getElementById('monthTitle').textContent=
+  y+' · '+String(m+1).padStart(2,'0');
+
+ const first=new Date(y,m,1);
+
+ const start=(first.getDay()+6)%7;
+
+ const days=
+  new Date(y,m+1,0).getDate();
+
+ let html='';
+
+
+ for(let i=0;i<start;i++){
+
+  let d=
+   new Date(
+    y,
+    m,
+    i-start+1
+   );
+
+  html+=
+   '<div class="day other">'
+   +'<div class="daynum">'+d.getDate()+'</div>'
+   +'</div>';
+
+ }
+
+
+ for(let n=1;n<=days;n++){
+
+  const iso=
+   y+'-'
+   +String(m+1).padStart(2,'0')
+   +'-'
+   +String(n).padStart(2,'0');
+
+  const rs=
+   records.filter(
+    r=>r.date===iso
+   );
+
+  const r=
+   rs.find(x=>x.photo);
+
+  html+=
+   '<button class="day '+(r?'hasphoto':'')+'"'
+   +' onclick="openDay(\''+iso+'\')">'
+   +(r
+    ?'<img class="thumb" src="'+r.photo+'">'
+    :'')
+   +'<div class="daynum">'+n+'</div>'
+   +(rs.length
+    ?'<i class="mark"></i>'
+    :'')
+   +'</button>';
+
+ }
+
+ document.getElementById('cal').innerHTML=html;
+
+}
+
+
+function changeMonth(n){
+
+ currentMonth.setMonth(
+  currentMonth.getMonth()+n
+ );
+
+ renderCalendar();
+
+}
+
+
+/* 打开日期 */
+
+function openDay(date){
+
+ const rs=
+  records.filter(
+   r=>r.date===date
+  );
+
+ if(rs.length===1){
+
+  openViewer(rs[0].id);
+
+ }else if(rs.length>1){
+
+  document.getElementById('viewDate')
+   .textContent=fmt(date);
+
+  document.getElementById('viewContent')
+   .innerHTML=rs.map(r=>
+    '<div class="multi-record" style="padding-bottom:16px;margin-bottom:16px;border-bottom:1px solid #eee">'
+    +mediaHtml(r)
+    +'<div class="small-actions" style="margin-top:10px;display:flex;gap:8px">'
+    +'<button onclick="openViewer(\''+r.id+'\')">查看</button>'
+    +'<button onclick="editRecordFromDay(\''+r.id+'\')">编辑</button>'
+    +'<button onclick="deleteRecordFromDay(\''+r.id+'\')">删除</button>'
+    +'</div></div>'
+   ).join('');
+
+  viewingId=null;
+
+  document
+   .getElementById('viewer')
+   .classList.add('show');
+
+ }else{
+
+  openEditor(date);
+
+ }
+
+}
+
+
+/* 编辑 */
+
+function openEditor(
+ date=todayISO(),
+ id=null
+){
+
+ editingId=id;
+ tempPhoto='';
+ tempPhotoMode='original';
+ document.getElementById('photoMode').style.display='none';
+
+ document.getElementById('editorTitle')
+  .textContent=
+   id
+    ?'编辑记录'
+    :'留下一件事';
+
+ document.getElementById('editDate')
+  .value=date;
+
+ const r=
+  id
+   ?records.find(x=>x.id===id)
+   :null;
+
+ document.getElementById('editText')
+  .value=r?.text||'';
+
+ if(r?.photo){
+
+  tempPhoto=r.photo;
+  tempPhotoMode=r.photoMode==='sticker'?'sticker':'original';
+  document.getElementById('photoMode').style.display='block';
+  setPhotoMode(tempPhotoMode);
+  showPreview(r.photo);
+
+ }else{
+
+  document.getElementById('preview')
+   .style.display='none';
+
+ }
+
+ document
+  .getElementById('editor')
+  .classList.add('show');
+
+}
+
+
+function closeEditor(){
+
+ document
+  .getElementById('editor')
+  .classList.remove('show');
+
+}
+
+
+/* 照片模式与贴纸 */
+function setPhotoMode(mode){
+ tempPhotoMode=mode;
+ document.getElementById('modeOriginal')?.classList.toggle('active',mode==='original');
+ document.getElementById('modeSticker')?.classList.toggle('active',mode==='sticker');
+ if(tempPhoto) processLoadedPhoto(tempPhoto,mode);
+}
+
+function processLoadedPhoto(src,mode){
+ if(mode==='sticker'){
+  makeSticker(src).then(x=>{tempPhoto=x;showPreview(x);});
+ }else{
+  compressPhoto(src).then(x=>{tempPhoto=x;showPreview(x);});
+ }
+}
+function compressPhoto(src){
+ return new Promise(resolve=>{
+  const img=new Image(); img.onload=()=>{
+   const max=1280,scale=Math.min(1,max/Math.max(img.width,img.height));
+   const c=document.createElement('canvas'); c.width=Math.max(1,Math.round(img.width*scale)); c.height=Math.max(1,Math.round(img.height*scale));
+   c.getContext('2d').drawImage(img,0,0,c.width,c.height); resolve(c.toDataURL('image/jpeg',.82));
+  }; img.src=src;
+ });
+}
+function makeSticker(src){
+ return new Promise(resolve=>{
+  const img=new Image(); img.onload=()=>{
+   const max=900,scale=Math.min(1,max/Math.max(img.width,img.height));
+   const w=Math.max(1,Math.round(img.width*scale)),h=Math.max(1,Math.round(img.height*scale));
+   const c=document.createElement('canvas'),ctx=c.getContext('2d'); c.width=w;c.height=h;ctx.drawImage(img,0,0,w,h);
+   const d=ctx.getImageData(0,0,w,h),a=d.data;
+   // 对四角背景做颜色采样：适合墙面、桌面等相对均匀背景；复杂背景仍保留主体，不会破坏原图。
+   const samples=[]; [[2,2],[w-3,2],[2,h-3],[w-3,h-3]].forEach(([x,y])=>{let i=(y*w+x)*4;samples.push([a[i],a[i+1],a[i+2]]);});
+   const bg=samples.reduce((z,v)=>[z[0]+v[0],z[1]+v[1],z[2]+v[2]],[0,0,0]).map(x=>x/4);
+   const mask=new Uint8Array(w*h); const q=[]; const seen=new Uint8Array(w*h);
+   function similar(i){let dr=a[i]-bg[0],dg=a[i+1]-bg[1],db=a[i+2]-bg[2];return Math.sqrt(dr*dr+dg*dg+db*db)<48;}
+   [[0,0],[w-1,0],[0,h-1],[w-1,h-1]].forEach(([x,y])=>{let k=y*w+x;if(!seen[k]&&similar(k*4)){seen[k]=1;q.push(k);}});
+   for(let qi=0;qi<q.length;qi++){let k=q[qi],x=k%w,y=(k/w)|0;mask[k]=1;for(const [nx,ny] of [[x+1,y],[x-1,y],[x,y+1],[x,y-1]]){if(nx>=0&&nx<w&&ny>=0&&ny<h){let nk=ny*w+nx;if(!seen[nk]&&similar(nk*4)){seen[nk]=1;q.push(nk);}}}}
+   for(let k=0;k<w*h;k++){if(mask[k])a[k*4+3]=0;}
+   ctx.putImageData(d,0,0);
+   // 找非透明主体边界并留出描边空间
+   let minX=w,minY=h,maxX=-1,maxY=-1; for(let y=0;y<h;y++)for(let x=0;x<w;x++)if(a[(y*w+x)*4+3]>20){if(x<minX)minX=x;if(x>maxX)maxX=x;if(y<minY)minY=y;if(y>maxY)maxY=y;}
+   if(maxX<0){resolve(src);return;}
+   const pad=Math.max(10,Math.round(Math.min(w,h)*.035)); minX=Math.max(0,minX-pad);minY=Math.max(0,minY-pad);maxX=Math.min(w-1,maxX+pad);maxY=Math.min(h-1,maxY+pad);
+   const sw=maxX-minX+1,sh=maxY-minY+1,oc=document.createElement('canvas');oc.width=sw+pad*2;oc.height=sh+pad*2;const o=oc.getContext('2d');
+   // 描边：多方向重复绘制，最后叠主体
+   for(let yy=-3;yy<=3;yy+=1)for(let xx=-3;xx<=3;xx+=1){if(xx*xx+yy*yy<=12)o.drawImage(c,minX,minY,sw,sh,pad+xx,pad+yy,sw,sh);}
+   o.globalCompositeOperation='source-in';o.fillStyle='#fff';o.fillRect(0,0,oc.width,oc.height);o.globalCompositeOperation='source-over';o.drawImage(c,minX,minY,sw,sh,pad,pad,sw,sh);
+   resolve(oc.toDataURL('image/png'));
+  }; img.src=src;
+ });
+}
+
+/* 读取照片并压缩 */
+
+function loadPhoto(e){
+ const f=e.target.files[0]; if(!f)return;
+ const rd=new FileReader();
+ rd.onload=()=>{
+  document.getElementById('photoMode').style.display='block';
+  tempPhotoMode='original'; setPhotoMode('original');
+  processLoadedPhoto(rd.result,'original');
+ };
+ rd.readAsDataURL(f); e.target.value='';
+}
+
+function showPreview(src){
+
+ const p=
+  document.getElementById('preview');
+
+ p.src=src;
+
+ p.style.display='block';
+
+}
+
+
+/* 保存编辑 */
+
+function saveEditor(){
+
+ const text=
+  document
+   .getElementById('editText')
+   .value
+   .trim();
+
+ const date=
+  document
+   .getElementById('editDate')
+   .value;
+
+ if(
+  !date||
+  (!text&&!tempPhoto)
+ ){
+
+  alert('至少留下文字或照片');
+
+  return;
+
+ }
+
+
+ if(editingId){
+
+  const r=
+   records.find(
+    x=>x.id===editingId
+   );
+
+  if(r){
+
+   r.date=date;
+   r.text=text;
+   r.photo=tempPhoto;
+   r.photoMode=tempPhotoMode;
+
+  }
+
+ }else{
+
+  records.push({
+
+   id:crypto.randomUUID(),
+
+   date,
+
+   text,
+
+   photo:tempPhoto,
+   photoMode:tempPhotoMode
+
+  });
+
+ }
+
+
+ persist();
+
+ currentMonth=
+  new Date(date+'T00:00:00');
+
+ currentMonth.setDate(1);
+
+ closeEditor();
+
+ renderChance();
+
+ renderCalendar();
+
+}
+
+
+/* 首页直接留下文字 */
+
+function saveToday(){
+
+ const text=
+  document
+   .getElementById('todayText')
+   .value
+   .trim();
+
+ if(!text){
+
+  openEditor();
+
+  return;
+
+ }
+
+ records.push({
+
+  id:crypto.randomUUID(),
+
+  date:todayISO(),
+
+  text,
+
+  photo:'',
+  photoMode:'original'
+
+ });
+
+ persist();
+
+ document.getElementById('todayText')
+  .value='';
+
+ currentMonth=new Date();
+ currentMonth.setDate(1);
+
+ renderChance();
+
+ renderCalendar();
+
+}
+
+
+/* 查看 */
+
+function openViewer(id){
+
+ viewingId=id;
+
+ const r=
+  records.find(
+   x=>x.id===id
+  );
+
+ if(!r)return;
+
+ document.getElementById('viewDate')
+  .textContent=fmt(r.date);
+
+ document.getElementById('viewContent')
+  .innerHTML=
+   mediaHtml(r);
+
+ document
+  .getElementById('viewer')
+  .classList.add('show');
+
+}
+
+
+function closeViewer(){
+
+ document
+  .getElementById('viewer')
+  .classList.remove('show');
+
+}
+
+
+/* 编辑当前记录 */
+
+function editRecordFromDay(id){
+ const r=records.find(x=>x.id===id);
+ if(!r)return;
+ closeViewer();
+ openEditor(r.date,id);
+}
+
+function deleteRecordFromDay(id){
+ const r=records.find(x=>x.id===id);
+ if(!r)return;
+ if(!confirm('删除这条记录吗？'))return;
+ records=records.filter(x=>x.id!==id);
+ persist();
+ closeViewer();
+ renderChance();
+ renderCalendar();
+}
+
+function editCurrent(){
+
+ if(!viewingId)return;
+
+ const r=
+  records.find(
+   x=>x.id===viewingId
+  );
+
+ if(!r)return;
+
+ closeViewer();
+
+ openEditor(
+  r.date,
+  viewingId
+ );
+
+}
+
+
+/* 删除：不再询问 */
+
+function deleteCurrent(){
+
+ if(!viewingId)return;
+
+ records=
+  records.filter(
+   r=>r.id!==viewingId
+  );
+
+ persist();
+
+ closeViewer();
+
+ renderChance();
+
+ renderCalendar();
+
+}
+
+
+/* 设置 */
+
+function openSettings(){
+
+ document
+  .getElementById('settings')
+  .classList.add('show');
+
+}
+
+
+function closeSettings(){
+
+ document
+  .getElementById('settings')
+  .classList.remove('show');
+
+}
+
+
+/* 导出 */
+
+function exportData(){
+
+ const payload={
+  app:'future',
+  version:2,
+  exportedAt:new Date().toISOString(),
+  records
+ };
+
+ const json=
+  JSON.stringify(
+   payload,
+   null,
+   2
+  );
+
+ const filename=
+  'future-日志备份-'
+  +todayISO()
+  +'.json';
+
+
+ /* APK 原生文件保存 */
+
+ if(
+  window.Android&&
+  typeof window.Android.saveFile==='function'
+ ){
+
+  window.Android.saveFile(
+   filename,
+   json
+  );
+
+  return;
+
+ }
+
+
+ /* 浏览器备用方案 */
+
+ const blob=
+  new Blob(
+   [json],
+   {type:'application/json'}
+  );
+
+ const a=
+  document.createElement('a');
+
+ a.href=
+  URL.createObjectURL(blob);
+
+ a.download=filename;
+
+ a.click();
+
+ setTimeout(
+  ()=>URL.revokeObjectURL(a.href),
+  1000
+ );
+
+}
+
+
+/* 导入 JSON 文件 */
+
+function importData(e){
+
+ const f=e.target.files[0];
+
+ if(!f)return;
+
+ const rd=new FileReader();
+
+ rd.onload=()=>{
+
+  try{
+
+   const data=
+    JSON.parse(rd.result);
+
+   const incoming=
+    Array.isArray(data)
+     ?data
+     :data.records;
+
+   if(!Array.isArray(incoming))
+    throw new Error();
+
+
+   const clean=
+    incoming
+     .filter(
+      r=>r&&r.id&&r.date
+     )
+     .map(
+      r=>({
+       id:String(r.id),
+       date:String(r.date),
+       text:String(r.text||''),
+       photo:String(r.photo||''),
+       photoMode:r.photoMode==='sticker'?'sticker':'original'
+      })
+     );
+
+
+   if(
+    !confirm(
+     '导入将与现有记录合并，重复记录会覆盖。继续吗？'
+    )
+   ){
+
+    e.target.value='';
+
+    return;
+
+   }
+
+
+   const map=
+    new Map(
+     records.map(
+      r=>[r.id,r]
+     )
+    );
+
+
+   clean.forEach(
+    r=>map.set(r.id,r)
+   );
+
+
+   records=
+    [...map.values()];
+
+
+   persist();
+
+   renderChance();
+
+   renderCalendar();
+
+   closeSettings();
+
+   alert('导入完成');
+
+
+  }catch(err){
+
+   alert('备份文件无法读取');
+
+  }
+
+
+  e.target.value='';
+
+ };
+
+
+ rd.readAsText(f);
+
+}
+
+
+/* 添加到桌面 */
+
+let deferredInstallPrompt=null;
+
+window.addEventListener(
+ 'beforeinstallprompt',
+ e=>{
+
+  e.preventDefault();
+
+  deferredInstallPrompt=e;
+
+ }
+);
+
+
+async function installApp(){
+
+ if(deferredInstallPrompt){
+
+  deferredInstallPrompt.prompt();
+
+  await deferredInstallPrompt.userChoice;
+
+  deferredInstallPrompt=null;
+
+ }else{
+
+  alert(
+   '在 Android Chrome 中，请打开浏览器菜单 ⋮，选择“安装应用”或“添加到主屏幕”。如果已经安装，则无需重复操作。'
+  );
+
+ }
+
+}
+
+
+/* 每周贴纸罐 */
+function startOfWeek(date){const d=new Date(date);d.setHours(0,0,0,0);const day=(d.getDay()+6)%7;d.setDate(d.getDate()-day);return d;}
+function weekKey(date){return startOfWeek(date).toISOString().slice(0,10);}
+function stickerRecordsForWeek(key){const end=new Date(key+'T00:00:00');end.setDate(end.getDate()+7);const endKey=end.toISOString().slice(0,10);return records.filter(r=>r.photo&&r.photoMode==='sticker'&&r.date>=key&&r.date<endKey);}
+function renderJar(){
+ const base=startOfWeek(new Date());base.setDate(base.getDate()+jarWeekOffset*7);const key=weekKey(base);const rs=stickerRecordsForWeek(key);
+ const end=new Date(base);end.setDate(end.getDate()+6);
+ document.getElementById('jarTitle').textContent=fmt(key)+' — '+fmt(key===weekKey(new Date())?key:end.toISOString().slice(0,10));
+ document.getElementById('jarWeekLabel').textContent=jarWeekOffset===0?'本周':(jarWeekOffset<0?'上一周':'下一周');
+ document.getElementById('jarCount').textContent=rs.length+' 张';
+ const body=document.getElementById('jarBody');body.innerHTML='';
+ if(!rs.length){body.innerHTML='<div class="jar-empty">这一周还没有贴纸。<br>去写下一点东西，再把照片裁成贴纸。</div>';return;}
+ const seed=key.split('-').reduce((a,v)=>a+Number(v),0);let rand=mulberry32(seed);
+ const placed=[];
+ rs.forEach((r,i)=>{
+  const im=document.createElement('img');im.className='jar-sticker';im.src=r.photo;
+  let x=8,y=10,ok=false;
+  for(let attempt=0;attempt<80;attempt++){
+   const tx=8+rand()*78,ty=10+rand()*78;
+   if(placed.every(p=>Math.hypot((tx-p.x)*.9,ty-p.y)>.14)){x=tx;y=ty;ok=true;break;}
+  }
+  if(!ok){x=8+rand()*78;y=10+rand()*78;}
+  placed.push({x:x/100,y:y/100});
+  const rot=-11+rand()*22,scale=.82+rand()*.30;
+  im.style.left=x+'%';im.style.top=y+'%';im.style.transform=`translate(-50%,-50%) rotate(${rot}deg) scale(${scale})`;im.title=fmt(r.date);body.appendChild(im);
+ });
+}
+function mulberry32(a){return function(){let t=a+=0x6D2B79F5;t=Math.imul(t^t>>>15,t|1);t^=t+Math.imul(t^t>>>7,t|61);return((t^t>>>14)>>>0)/4294967296;}}
+function changeJarWeek(n){jarWeekOffset+=n;renderJar();}
+function jumpToCurrentWeek(){jarWeekOffset=0;renderJar();}
+
+/* 初始化 */
+
+renderChance();
+
+renderCalendar();
+
+setTimeTheme();
+
+lastToday=todayISO();
+
+
+/* 自动跨午夜更新 */
+
+setInterval(()=>{
+
+ setTimeTheme();
+
+ const now=todayISO();
+
+ if(now!==lastToday){
+
+  const oldDate=
+   new Date(
+    lastToday+'T00:00:00'
+   );
+
+  const wasCurrentMonth=
+   currentMonth.getFullYear()
+    ===oldDate.getFullYear()
+   &&
+   currentMonth.getMonth()
+    ===oldDate.getMonth();
+
+
+  lastToday=now;
+
+
+  if(wasCurrentMonth){
+
+   currentMonth=new Date();
+
+   currentMonth.setDate(1);
+
+  }
+
+
+  renderChance();
+
+  renderCalendar();
+
+ }
+
+},30000);
+
+
+/* PWA */
+
+if(
+ "serviceWorker" in navigator
+){
+
+ navigator.serviceWorker
+  .register("./sw.js")
+  .catch(()=>{});
+
+}
 
 </script>
+
+<script>setTimeout(()=>document.getElementById('startupSplash')?.classList.add('hide'),900);</script>
+
 </body>
 </html>
