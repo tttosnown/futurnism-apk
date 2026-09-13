@@ -3,21 +3,22 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="theme-color" content="#f3f0f8">
+<meta name="theme-color" content="#f2efe0">
 <title>future</title>
 <link rel="manifest" href="manifest.json">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="application-name" content="future">
-<link rel="icon" href="icons/icon-192.png">
+<link rel="icon" href="icon-192.png">
 
 <style>
 *{box-sizing:border-box}
+:root{--palette-red:#b9210c;--palette-cream:#f2efe0;--palette-yellow:#f9d991;--palette-blue:#c9ddf5;--ink:#38556b;--ink-soft:#667789}
 body{
  margin:0;
  background:#f3f0f8;
- color:#17151a;
+ color:var(--ink);
  font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display","PingFang SC",sans-serif;
  transition:background 1.2s ease;
 }
@@ -68,11 +69,14 @@ header{
 }
 
 .card{
- background:#fff;
+ background:rgba(242,239,224,.94);
+ border:1px solid rgba(201,221,245,.72);
  border-radius:24px;
  padding:22px;
  margin-bottom:14px;
- box-shadow:0 3px 18px #00000008;
+ box-shadow:0 5px 22px rgba(56,85,107,.08);
+ background-image:radial-gradient(rgba(56,85,107,.055) .7px,transparent .7px);
+ background-size:8px 8px;
 }
 
 .label{
@@ -118,7 +122,7 @@ header{
  border:0;
  outline:0;
  resize:vertical;
- background:#f7f5f9;
+ background:rgba(201,221,245,.34);
  border-radius:18px;
  padding:16px;
 }
@@ -132,14 +136,14 @@ header{
 .pill{
  padding:11px 15px;
  border-radius:999px;
- background:#17151a;
- color:white;
+ background:var(--palette-red);
+ color:#fff;
  font-size:13px;
 }
 
 .pill.light{
- background:#eeeaf1;
- color:#17151a;
+ background:var(--palette-blue);
+ color:var(--ink);
 }
 
 .bottom{
@@ -149,7 +153,7 @@ header{
  transform:translateX(-50%);
  width:min(760px,100%);
  padding:10px 18px calc(10px + env(safe-area-inset-bottom));
- background:linear-gradient(to top,rgba(255,255,255,.78),rgba(255,255,255,.2));
+ background:linear-gradient(to top,rgba(242,239,224,.92),rgba(242,239,224,.22));
  backdrop-filter:blur(18px);
  display:flex;
  gap:8px;
@@ -165,8 +169,8 @@ header{
 }
 
 .nav.active{
- background:#17151a;
- color:white;
+ background:var(--palette-blue);
+ color:var(--ink);
 }
 
 .monthbar{
@@ -185,7 +189,8 @@ header{
  width:40px;
  height:40px;
  border-radius:50%;
- background:#fff;
+ background:var(--palette-cream);
+ border:1px solid rgba(56,85,107,.12);
  font-size:22px;
 }
 
@@ -205,7 +210,8 @@ header{
 
 .day{
  min-height:72px;
- background:#fff;
+ background:rgba(242,239,224,.86);
+ border:1px solid rgba(201,221,245,.7);
  border-radius:13px;
  padding:8px;
  position:relative;
@@ -230,7 +236,7 @@ header{
  width:7px;
  height:7px;
  border-radius:50%;
- background:#17151a;
+ background:var(--palette-red);
 }
 
 .thumb{
@@ -269,7 +275,8 @@ header{
  width:100%;
  max-width:760px;
  margin:auto;
- background:#fff;
+ background:var(--palette-cream);
+ border:1px solid rgba(201,221,245,.8);
  border-radius:28px 28px 0 0;
  padding:20px 18px calc(24px + env(safe-area-inset-bottom));
  max-height:88vh;
@@ -296,7 +303,7 @@ header{
  width:38px;
  height:38px;
  border-radius:50%;
- background:#f1eef3;
+ background:var(--palette-blue);
 }
 
 .field{
@@ -307,7 +314,7 @@ header{
 .field textarea{
  width:100%;
  border:0;
- background:#f6f4f7;
+ background:rgba(201,221,245,.3);
  border-radius:16px;
  padding:13px;
  outline:0;
@@ -340,7 +347,7 @@ header{
  font-size:12px;
  padding:8px 12px;
  border-radius:999px;
- background:#eeeaf1;
+ background:var(--palette-blue);
 }
 
 .iconbtn{
@@ -350,13 +357,13 @@ header{
  display:inline-flex;
  align-items:center;
  justify-content:center;
- background:#eeecef;
- color:#111;
+ background:var(--palette-yellow);
+ color:var(--ink);
  padding:0;
 }
 
 .iconbtn.dark{
- background:#111;
+ background:var(--palette-red);
  color:#fff;
 }
 
@@ -384,7 +391,7 @@ header{
  align-items:center;
  justify-content:center;
  gap:3px;
- background:rgba(255,255,255,.62);
+ background:rgba(242,239,224,.86);
 }
 
 .more span{
@@ -420,51 +427,41 @@ header{
 .setting-row>svg{
  width:21px;
  height:21px;
- stroke:#111;
+ stroke:var(--ink);
  fill:none;
  stroke-width:1.7;
  stroke-linecap:round;
  stroke-linejoin:round;
 }
 
+/* 照片贴纸模式 */
+.photo-mode{display:none;margin:12px 0 2px;padding:15px;border-radius:20px;background:rgba(201,221,245,.34);border:1px solid rgba(56,85,107,.08)}
+.photo-mode.show{display:block}
+.photo-mode-title{font-size:14px;font-weight:650;margin-bottom:10px}
+.photo-mode-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.photo-mode-btn{padding:13px 10px;border-radius:16px;background:rgba(242,239,224,.95);border:1px solid rgba(56,85,107,.14);color:var(--ink);font-size:14px}
+.photo-mode-btn.active{background:var(--palette-blue);border-color:rgba(56,85,107,.25);font-weight:650}
+.photo-mode-btn.sticker.active{box-shadow:inset 0 0 0 2px rgba(249,217,145,.8)}
+.photo-mode-hint{font-size:11px;line-height:1.55;opacity:.58;margin-top:9px}
+.sticker-preview{background:rgba(201,221,245,.22)!important;object-fit:contain!important;padding:12px}
+.processing{display:inline-flex;align-items:center;gap:7px;color:var(--ink);font-size:12px}
+.processing:before{content:"";width:10px;height:10px;border-radius:50%;border:2px solid rgba(56,85,107,.2);border-top-color:var(--palette-red);animation:spin .7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
 
-/* 纸张与 future 视觉层次 */
-body{
- background-image:radial-gradient(rgba(30,25,35,.035) .7px,transparent .7px);
- background-size:7px 7px;
-}
-.card,.sheet,.day,.arrow,.jar-week-btn{
- border:1px solid rgba(30,25,35,.045);
- box-shadow:0 8px 24px rgba(20,15,25,.055), inset 0 1px 0 rgba(255,255,255,.72);
-}
-.card{
- background:rgba(255,255,255,.88);
-}
-.pill,.nav.active{box-shadow:0 5px 14px rgba(20,15,25,.10)}
-
-.photo-mode{margin:2px 0 14px;padding:14px;border-radius:18px;background:rgba(246,243,247,.86);}
-.photo-mode-title{font-size:12px;opacity:.55;margin-bottom:10px}
-.photo-mode-options{display:flex;gap:8px}
-.mode-option{flex:1;padding:12px 10px;border-radius:14px;background:#fff;border:1px solid #e7e2e9;display:flex;align-items:center;justify-content:center;gap:7px;font-size:13px}
-.mode-option.active{background:#17151a;color:#fff;border-color:#17151a}
-.mode-icon{font-size:15px}
-.mode-note{font-size:10px;line-height:1.5;opacity:.42;margin-top:9px}
-
-.jar-head{display:flex;justify-content:space-between;align-items:end;margin:8px 4px 10px}
-.jar-title{font-size:22px;font-weight:600}
-.jar-count{font-size:12px;opacity:.5}
-.jar-nav{display:flex;align-items:center;justify-content:space-between;margin:0 3px 14px}
-.jar-week-btn{padding:10px 18px;border-radius:999px;background:rgba(255,255,255,.76);font-size:12px}
-.glass-jar{position:relative;width:min(100%,520px);height:58vh;min-height:430px;max-height:680px;margin:0 auto 14px;border-radius:42px 42px 54px 54px;background:linear-gradient(90deg,rgba(255,255,255,.34),rgba(255,255,255,.08) 15%,rgba(255,255,255,.05) 75%,rgba(255,255,255,.28));border:2px solid rgba(255,255,255,.62);box-shadow:inset 0 0 0 1px rgba(90,80,100,.08),inset 12px 0 25px rgba(255,255,255,.25),inset -12px 0 25px rgba(120,110,130,.08),0 18px 35px rgba(50,40,60,.10);overflow:hidden}
-.jar-rim{position:absolute;left:6%;right:6%;top:8px;height:24px;border-radius:50%;border:2px solid rgba(255,255,255,.58);background:rgba(255,255,255,.16);box-shadow:0 4px 10px rgba(40,30,50,.08);z-index:3}
-.jar-glass-shine{position:absolute;top:5%;bottom:8%;left:7%;width:12%;border-radius:50%;background:linear-gradient(to bottom,rgba(255,255,255,.50),rgba(255,255,255,.04));filter:blur(2px);z-index:4;pointer-events:none}
-.jar-body{position:absolute;inset:8% 5% 6%;overflow:hidden}
-.jar-bottom{position:absolute;left:7%;right:7%;bottom:5px;height:34px;border-radius:50%;border:2px solid rgba(255,255,255,.36);background:rgba(255,255,255,.09)}
-.jar-sticker{position:absolute;max-width:92px;max-height:92px;width:auto;height:auto;object-fit:contain;filter:drop-shadow(0 4px 5px rgba(30,25,35,.14));user-select:none}
-.jar-empty{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;text-align:center;padding:40px;font-size:13px;line-height:1.7;opacity:.34}
-.jar-hint{font-size:11px;line-height:1.6;text-align:center;opacity:.38;padding:0 24px 20px}
-@media(max-width:430px){.glass-jar{min-height:390px;height:54vh}.jar-sticker{max-width:76px;max-height:76px}}
-
+/* 大型每周玻璃贴纸罐 */
+.jar-card{background:rgba(242,239,224,.82);border:1px solid rgba(201,221,245,.9);padding:16px;overflow:hidden}
+.jar-toolbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+.jar-week{font-size:16px;font-weight:650;color:var(--ink)}
+.jar-count{font-size:11px;opacity:.55}
+.jar-wrap{position:relative;width:100%;height:min(70vh,620px);min-height:430px;border-radius:42px 42px 48px 48px;background:linear-gradient(135deg,rgba(255,255,255,.42),rgba(201,221,245,.17) 42%,rgba(255,255,255,.28));border:2px solid rgba(255,255,255,.78);box-shadow:inset 0 0 0 1px rgba(56,85,107,.08),inset 0 18px 30px rgba(255,255,255,.3),0 16px 32px rgba(56,85,107,.1);overflow:hidden}
+.jar-neck{position:absolute;left:18%;right:18%;top:-5px;height:42px;border-radius:0 0 22px 22px;background:linear-gradient(90deg,rgba(255,255,255,.38),rgba(201,221,245,.28),rgba(255,255,255,.42));border:2px solid rgba(255,255,255,.75);border-top:0}
+.jar-glass{position:absolute;inset:0;pointer-events:none;background:linear-gradient(105deg,rgba(255,255,255,.3),transparent 22%,transparent 74%,rgba(255,255,255,.22));}
+.jar-highlight{position:absolute;left:12px;top:58px;width:10px;height:62%;border-radius:99px;background:linear-gradient(rgba(255,255,255,.55),rgba(255,255,255,.03));opacity:.65}
+.jar-sticker{position:absolute;object-fit:contain;filter:drop-shadow(0 4px 4px rgba(56,85,107,.13));transform-origin:center;user-select:none;animation:jarDrop .48s cubic-bezier(.2,.9,.25,1.2) both}@keyframes jarDrop{0%{opacity:0;transform:translateY(-45px) rotate(-5deg) scale(.84)}100%{opacity:1;transform:translateY(0) rotate(var(--r)) scale(1)}}
+.jar-empty{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;text-align:center;color:var(--ink);opacity:.42;font-size:13px;padding:40px}
+.jar-nav{display:flex;align-items:center;gap:8px}
+.jar-nav button{padding:9px 13px;border-radius:999px;background:var(--palette-blue);color:var(--ink);font-size:12px}
+.jar-nav button.current{background:var(--palette-yellow)}
 /* 时间背景 */
 body.time-morning{
  background:linear-gradient(135deg,#edf7fc 0%,#f7fbfd 50%,#eaf5fb 100%);
@@ -633,25 +630,25 @@ body.time-late{
 </main>
 
 <main id="jar" class="page">
- <section class="jar-head">
-  <div>
-   <div class="label">WEEKLY STICKER JAR</div>
-   <div class="jar-title" id="jarTitle"></div>
+ <section class="card jar-card">
+  <div class="jar-toolbar">
+   <div>
+    <div class="label">WEEKLY JAR</div>
+    <div class="jar-week" id="jarWeekTitle"></div>
+   </div>
+   <div class="jar-nav">
+    <button onclick="changeJarWeek(-1)">‹</button>
+    <button class="current" onclick="goCurrentJarWeek()">本周</button>
+    <button onclick="changeJarWeek(1)">›</button>
+   </div>
   </div>
-  <div class="jar-count" id="jarCount">0 张</div>
+  <div class="jar-count" id="jarCount"></div>
+  <div class="jar-wrap" id="jarWrap">
+   <div class="jar-neck"></div>
+   <div class="jar-highlight"></div>
+   <div class="jar-glass"></div>
+  </div>
  </section>
- <div class="jar-nav">
-  <button class="arrow" onclick="changeJarWeek(-1)">‹</button>
-  <button class="jar-week-btn" id="jarWeekLabel" onclick="jumpToCurrentWeek()">本周</button>
-  <button class="arrow" onclick="changeJarWeek(1)">›</button>
- </div>
- <section class="glass-jar" id="glassJar">
-  <div class="jar-glass-shine"></div>
-  <div class="jar-rim"></div>
-  <div class="jar-body" id="jarBody"></div>
-  <div class="jar-bottom"></div>
- </section>
- <div class="jar-hint">每周重新开始。你留下的每一张贴纸，都会落进这一周的玻璃罐里。</div>
 </main>
 
 </div>
@@ -713,17 +710,13 @@ body.time-late{
    style="display:none"
   >
 
-  <div id="photoMode" class="photo-mode" style="display:none">
+  <div id="photoMode" class="photo-mode">
    <div class="photo-mode-title">照片怎么留下？</div>
-   <div class="photo-mode-options">
-    <button type="button" id="modeOriginal" class="mode-option active" onclick="setPhotoMode('original')">
-     <span class="mode-icon">▣</span><span>保留原图</span>
-    </button>
-    <button type="button" id="modeSticker" class="mode-option" onclick="setPhotoMode('sticker')">
-     <span class="mode-icon">✦</span><span>裁成贴纸</span>
-    </button>
+   <div class="photo-mode-grid">
+    <button id="modeOriginal" class="photo-mode-btn active" onclick="setPhotoMode('original')">▣ 保留原图</button>
+    <button id="modeSticker" class="photo-mode-btn sticker" onclick="setPhotoMode('sticker')">✦ 裁成贴纸</button>
    </div>
-   <div class="mode-note">贴纸会自动裁剪主体、加白色描边，并收进对应周的玻璃罐。</div>
+   <div id="photoModeHint" class="photo-mode-hint">贴纸会识别主体、扣掉背景，并自动加干净的白边。</div>
   </div>
 
   <div class="actions">
@@ -903,8 +896,10 @@ currentMonth.setDate(1);
 let editingId=null;
 let viewingId=null;
 let tempPhoto='';
+let tempOriginalPhoto='';
 let tempPhotoMode='original';
-let jarWeekOffset=0;
+let stickerProcessing=false;
+let jarWeekStart=null;
 
 let lastToday='';
 
@@ -1069,7 +1064,9 @@ function showPage(id){
   .getElementById(
    id==='chance'
     ?'navChance'
-    :id==='calendar'?'navCalendar':'navJar'
+    :id==='calendar'
+      ?'navCalendar'
+      :'navJar'
   )
   .classList.add('active');
 
@@ -1301,8 +1298,9 @@ function openEditor(
 
  editingId=id;
  tempPhoto='';
+ tempOriginalPhoto='';
  tempPhotoMode='original';
- document.getElementById('photoMode').style.display='none';
+ stickerProcessing=false;
 
  document.getElementById('editorTitle')
   .textContent=
@@ -1324,15 +1322,16 @@ function openEditor(
  if(r?.photo){
 
   tempPhoto=r.photo;
-  tempPhotoMode=r.photoMode==='sticker'?'sticker':'original';
-  document.getElementById('photoMode').style.display='block';
-  setPhotoMode(tempPhotoMode);
+  tempPhotoMode=r.photoMode||'original';
+  tempOriginalPhoto=r.originalPhoto||'';
   showPreview(r.photo);
+  showPhotoMode(true);
+  updatePhotoModeUI();
 
  }else{
 
-  document.getElementById('preview')
-   .style.display='none';
+  document.getElementById('preview').style.display='none';
+  showPhotoMode(false);
 
  }
 
@@ -1352,71 +1351,93 @@ function closeEditor(){
 }
 
 
-/* 照片模式与贴纸 */
-function setPhotoMode(mode){
- tempPhotoMode=mode;
- document.getElementById('modeOriginal')?.classList.toggle('active',mode==='original');
- document.getElementById('modeSticker')?.classList.toggle('active',mode==='sticker');
- if(tempPhoto) processLoadedPhoto(tempPhoto,mode);
-}
-
-function processLoadedPhoto(src,mode){
- if(mode==='sticker'){
-  makeSticker(src).then(x=>{tempPhoto=x;showPreview(x);});
- }else{
-  compressPhoto(src).then(x=>{tempPhoto=x;showPreview(x);});
- }
-}
-function compressPhoto(src){
- return new Promise(resolve=>{
-  const img=new Image(); img.onload=()=>{
-   const max=1280,scale=Math.min(1,max/Math.max(img.width,img.height));
-   const c=document.createElement('canvas'); c.width=Math.max(1,Math.round(img.width*scale)); c.height=Math.max(1,Math.round(img.height*scale));
-   c.getContext('2d').drawImage(img,0,0,c.width,c.height); resolve(c.toDataURL('image/jpeg',.82));
-  }; img.src=src;
- });
-}
-function makeSticker(src){
- return new Promise(resolve=>{
-  const img=new Image(); img.onload=()=>{
-   const max=900,scale=Math.min(1,max/Math.max(img.width,img.height));
-   const w=Math.max(1,Math.round(img.width*scale)),h=Math.max(1,Math.round(img.height*scale));
-   const c=document.createElement('canvas'),ctx=c.getContext('2d'); c.width=w;c.height=h;ctx.drawImage(img,0,0,w,h);
-   const d=ctx.getImageData(0,0,w,h),a=d.data;
-   // 对四角背景做颜色采样：适合墙面、桌面等相对均匀背景；复杂背景仍保留主体，不会破坏原图。
-   const samples=[]; [[2,2],[w-3,2],[2,h-3],[w-3,h-3]].forEach(([x,y])=>{let i=(y*w+x)*4;samples.push([a[i],a[i+1],a[i+2]]);});
-   const bg=samples.reduce((z,v)=>[z[0]+v[0],z[1]+v[1],z[2]+v[2]],[0,0,0]).map(x=>x/4);
-   const mask=new Uint8Array(w*h); const q=[]; const seen=new Uint8Array(w*h);
-   function similar(i){let dr=a[i]-bg[0],dg=a[i+1]-bg[1],db=a[i+2]-bg[2];return Math.sqrt(dr*dr+dg*dg+db*db)<48;}
-   [[0,0],[w-1,0],[0,h-1],[w-1,h-1]].forEach(([x,y])=>{let k=y*w+x;if(!seen[k]&&similar(k*4)){seen[k]=1;q.push(k);}});
-   for(let qi=0;qi<q.length;qi++){let k=q[qi],x=k%w,y=(k/w)|0;mask[k]=1;for(const [nx,ny] of [[x+1,y],[x-1,y],[x,y+1],[x,y-1]]){if(nx>=0&&nx<w&&ny>=0&&ny<h){let nk=ny*w+nx;if(!seen[nk]&&similar(nk*4)){seen[nk]=1;q.push(nk);}}}}
-   for(let k=0;k<w*h;k++){if(mask[k])a[k*4+3]=0;}
-   ctx.putImageData(d,0,0);
-   // 找非透明主体边界并留出描边空间
-   let minX=w,minY=h,maxX=-1,maxY=-1; for(let y=0;y<h;y++)for(let x=0;x<w;x++)if(a[(y*w+x)*4+3]>20){if(x<minX)minX=x;if(x>maxX)maxX=x;if(y<minY)minY=y;if(y>maxY)maxY=y;}
-   if(maxX<0){resolve(src);return;}
-   const pad=Math.max(10,Math.round(Math.min(w,h)*.035)); minX=Math.max(0,minX-pad);minY=Math.max(0,minY-pad);maxX=Math.min(w-1,maxX+pad);maxY=Math.min(h-1,maxY+pad);
-   const sw=maxX-minX+1,sh=maxY-minY+1,oc=document.createElement('canvas');oc.width=sw+pad*2;oc.height=sh+pad*2;const o=oc.getContext('2d');
-   // 描边：多方向重复绘制，最后叠主体
-   for(let yy=-3;yy<=3;yy+=1)for(let xx=-3;xx<=3;xx+=1){if(xx*xx+yy*yy<=12)o.drawImage(c,minX,minY,sw,sh,pad+xx,pad+yy,sw,sh);}
-   o.globalCompositeOperation='source-in';o.fillStyle='#fff';o.fillRect(0,0,oc.width,oc.height);o.globalCompositeOperation='source-over';o.drawImage(c,minX,minY,sw,sh,pad,pad,sw,sh);
-   resolve(oc.toDataURL('image/png'));
-  }; img.src=src;
- });
-}
-
 /* 读取照片并压缩 */
 
 function loadPhoto(e){
- const f=e.target.files[0]; if(!f)return;
+
+ const f=e.target.files[0];
+ if(!f)return;
  const rd=new FileReader();
  rd.onload=()=>{
-  document.getElementById('photoMode').style.display='block';
-  tempPhotoMode='original'; setPhotoMode('original');
-  processLoadedPhoto(rd.result,'original');
+  const img=new Image();
+  img.onload=()=>{
+   const max=1280;
+   const scale=Math.min(1,max/Math.max(img.width,img.height));
+   const c=document.createElement('canvas');
+   c.width=Math.max(1,Math.round(img.width*scale));
+   c.height=Math.max(1,Math.round(img.height*scale));
+   c.getContext('2d').drawImage(img,0,0,c.width,c.height);
+   tempOriginalPhoto=c.toDataURL('image/jpeg',.82);
+   tempPhoto=tempOriginalPhoto;
+   tempPhotoMode='original';
+   showPreview(tempPhoto);
+   showPhotoMode(true);
+   updatePhotoModeUI();
+  };
+  img.src=rd.result;
  };
- rd.readAsDataURL(f); e.target.value='';
+ rd.readAsDataURL(f);
+ e.target.value='';
 }
+
+
+function showPhotoMode(show){
+ const box=document.getElementById('photoMode');
+ if(!box)return;
+ box.classList.toggle('show',!!show);
+}
+
+function updatePhotoModeUI(){
+ const o=document.getElementById('modeOriginal');
+ const st=document.getElementById('modeSticker');
+ if(!o||!st)return;
+ o.classList.toggle('active',tempPhotoMode==='original');
+ st.classList.toggle('active',tempPhotoMode==='sticker');
+ const p=document.getElementById('preview');
+ if(p)p.classList.toggle('sticker-preview',tempPhotoMode==='sticker');
+ const hint=document.getElementById('photoModeHint');
+ if(hint){
+  hint.innerHTML=tempPhotoMode==='sticker'
+   ?'正在使用主体识别：只保留主体，透明背景，并自动加白色贴纸边。'
+   :'保留照片原貌，不进行抠图。';
+ }
+}
+
+function setPhotoMode(mode){
+ if(!tempOriginalPhoto&& !tempPhoto)return;
+ tempPhotoMode=mode;
+ updatePhotoModeUI();
+ if(mode==='original'){
+  if(tempOriginalPhoto){tempPhoto=tempOriginalPhoto;showPreview(tempPhoto);}
+  return;
+ }
+ if(stickerProcessing)return;
+ stickerProcessing=true;
+ const hint=document.getElementById('photoModeHint');
+ if(hint)hint.innerHTML='<span class="processing">正在识别主体并制作贴纸…</span>';
+ if(window.Android&&typeof window.Android.makeSticker==='function'){
+  window.Android.makeSticker(tempOriginalPhoto||tempPhoto);
+ }else{
+  stickerProcessing=false;
+  tempPhotoMode='original';
+  updatePhotoModeUI();
+  alert('请使用 future APK 版本进行主体抠图。');
+ }
+}
+
+window.onStickerReady=function(dataUrl){
+ stickerProcessing=false;
+ if(!dataUrl){
+  tempPhotoMode='original';
+  updatePhotoModeUI();
+  alert('主体识别失败，请换一张主体更清晰的照片。');
+  return;
+ }
+ tempPhoto=dataUrl;
+ tempPhotoMode='sticker';
+ showPreview(tempPhoto);
+ updatePhotoModeUI();
+};
 
 function showPreview(src){
 
@@ -1470,6 +1491,7 @@ function saveEditor(){
    r.text=text;
    r.photo=tempPhoto;
    r.photoMode=tempPhotoMode;
+   r.originalPhoto=tempOriginalPhoto||r.originalPhoto||'';
 
   }
 
@@ -1484,7 +1506,8 @@ function saveEditor(){
    text,
 
    photo:tempPhoto,
-   photoMode:tempPhotoMode
+   photoMode:tempPhotoMode,
+   originalPhoto:tempOriginalPhoto
 
   });
 
@@ -1533,8 +1556,7 @@ function saveToday(){
 
   text,
 
-  photo:'',
-  photoMode:'original'
+  photo:''
 
  });
 
@@ -1651,6 +1673,53 @@ function deleteCurrent(){
 
 }
 
+
+/* 每周贴纸罐 */
+function mondayOf(d){const x=new Date(d);x.setHours(0,0,0,0);const day=(x.getDay()+6)%7;x.setDate(x.getDate()-day);return x;}
+function jarKeyDate(d){return todayISODate(mondayOf(d));}
+function jarRangeLabel(start){const end=new Date(start);end.setDate(end.getDate()+6);return fmt(todayISODate(start))+' — '+fmt(todayISODate(end));}
+function ensureJarWeek(){if(!jarWeekStart)jarWeekStart=mondayOf(new Date());}
+function renderJar(){
+ ensureJarWeek();
+ const title=document.getElementById('jarWeekTitle'),count=document.getElementById('jarCount'),wrap=document.getElementById('jarWrap');
+ if(!title||!count||!wrap)return;
+ title.textContent=jarRangeLabel(jarWeekStart);
+ const key=jarKeyDate(jarWeekStart),end=new Date(jarWeekStart);end.setDate(end.getDate()+6);
+ const stickers=records.filter(r=>r.photo&&r.photoMode==='sticker'&&r.date>=key&&r.date<=todayISODate(end));
+ count.textContent=stickers.length+' 张贴纸';
+ wrap.querySelectorAll('.jar-sticker,.jar-empty').forEach(x=>x.remove());
+ if(!stickers.length){const e=document.createElement('div');e.className='jar-empty';e.innerHTML='这一周还没有贴纸<br>每天留下一张，它们会慢慢落进玻璃罐。';wrap.appendChild(e);return;}
+ const w=wrap.clientWidth||340,h=wrap.clientHeight||520,pad=20;
+ const density=Math.min(1,Math.sqrt(18/Math.max(1,stickers.length)));
+ const maxW=Math.min(w*.40,145)*density;
+ const maxH=Math.min(h*.21,110)*density;
+ const placed=[];
+ stickers.forEach((r,index)=>{
+  const img=document.createElement('img');
+  img.className='jar-sticker';img.src=r.photo;img.alt='';
+  const bw=maxW*(.72+Math.random()*.24);
+  const bh=maxH*(.72+Math.random()*.24);
+  let x=pad,y=70,best=null;
+  for(let tries=0;tries<140;tries++){
+   const cx=pad+Math.random()*Math.max(1,w-bw-pad*2);
+   const cy=70+Math.random()*Math.max(1,h-bh-pad-70);
+   const gap=8;
+   const hit=placed.some(q=>cx<q.x+q.w+gap&&cx+bw+gap>q.x&&cy<q.y+q.h+gap&&cy+bh+gap>q.y);
+   if(!hit){best={x:cx,y:cy,w:bw,h:bh};break;}
+   best=best||{x:cx,y:cy,w:bw,h:bh};
+  }
+  placed.push(best);
+  img.style.width=bw+'px';img.style.height=bh+'px';
+  img.style.left=best.x+'px';img.style.top=best.y+'px';
+  const rot=(Math.random()*14-7).toFixed(2)+'deg';
+  img.style.setProperty('--r',rot);
+  img.style.animationDelay=(index*35)+'ms';
+  wrap.appendChild(img);
+ });
+}
+
+function changeJarWeek(delta){ensureJarWeek();jarWeekStart=new Date(jarWeekStart);jarWeekStart.setDate(jarWeekStart.getDate()+delta*7);renderJar();}
+function goCurrentJarWeek(){jarWeekStart=mondayOf(new Date());renderJar();}
 
 /* 设置 */
 
@@ -1776,7 +1845,8 @@ function importData(e){
        date:String(r.date),
        text:String(r.text||''),
        photo:String(r.photo||''),
-       photoMode:r.photoMode==='sticker'?'sticker':'original'
+       photoMode:r.photoMode==='sticker'?'sticker':'original',
+       originalPhoto:String(r.originalPhoto||'')
       })
      );
 
@@ -1876,42 +1946,14 @@ async function installApp(){
 }
 
 
-/* 每周贴纸罐 */
-function startOfWeek(date){const d=new Date(date);d.setHours(0,0,0,0);const day=(d.getDay()+6)%7;d.setDate(d.getDate()-day);return d;}
-function weekKey(date){return startOfWeek(date).toISOString().slice(0,10);}
-function stickerRecordsForWeek(key){const end=new Date(key+'T00:00:00');end.setDate(end.getDate()+7);const endKey=end.toISOString().slice(0,10);return records.filter(r=>r.photo&&r.photoMode==='sticker'&&r.date>=key&&r.date<endKey);}
-function renderJar(){
- const base=startOfWeek(new Date());base.setDate(base.getDate()+jarWeekOffset*7);const key=weekKey(base);const rs=stickerRecordsForWeek(key);
- const end=new Date(base);end.setDate(end.getDate()+6);
- document.getElementById('jarTitle').textContent=fmt(key)+' — '+fmt(key===weekKey(new Date())?key:end.toISOString().slice(0,10));
- document.getElementById('jarWeekLabel').textContent=jarWeekOffset===0?'本周':(jarWeekOffset<0?'上一周':'下一周');
- document.getElementById('jarCount').textContent=rs.length+' 张';
- const body=document.getElementById('jarBody');body.innerHTML='';
- if(!rs.length){body.innerHTML='<div class="jar-empty">这一周还没有贴纸。<br>去写下一点东西，再把照片裁成贴纸。</div>';return;}
- const seed=key.split('-').reduce((a,v)=>a+Number(v),0);let rand=mulberry32(seed);
- const placed=[];
- rs.forEach((r,i)=>{
-  const im=document.createElement('img');im.className='jar-sticker';im.src=r.photo;
-  let x=8,y=10,ok=false;
-  for(let attempt=0;attempt<80;attempt++){
-   const tx=8+rand()*78,ty=10+rand()*78;
-   if(placed.every(p=>Math.hypot((tx-p.x)*.9,ty-p.y)>.14)){x=tx;y=ty;ok=true;break;}
-  }
-  if(!ok){x=8+rand()*78;y=10+rand()*78;}
-  placed.push({x:x/100,y:y/100});
-  const rot=-11+rand()*22,scale=.82+rand()*.30;
-  im.style.left=x+'%';im.style.top=y+'%';im.style.transform=`translate(-50%,-50%) rotate(${rot}deg) scale(${scale})`;im.title=fmt(r.date);body.appendChild(im);
- });
-}
-function mulberry32(a){return function(){let t=a+=0x6D2B79F5;t=Math.imul(t^t>>>15,t|1);t^=t+Math.imul(t^t>>>7,t|61);return((t^t>>>14)>>>0)/4294967296;}}
-function changeJarWeek(n){jarWeekOffset+=n;renderJar();}
-function jumpToCurrentWeek(){jarWeekOffset=0;renderJar();}
-
 /* 初始化 */
 
 renderChance();
 
 renderCalendar();
+
+jarWeekStart=mondayOf(new Date());
+renderJar();
 
 setTimeTheme();
 
@@ -1956,6 +1998,8 @@ setInterval(()=>{
   renderChance();
 
   renderCalendar();
+jarWeekStart=mondayOf(new Date());
+renderJar();
 
  }
 
