@@ -12,10 +12,10 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Set up JDK 17
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: '17'
@@ -626,7 +626,16 @@ jobs:
 
           dependencies {
               implementation 'androidx.core:core:1.15.0'
-              implementation 'com.google.android.gms:play-services-mlkit-subject-segmentation:16.0.0-beta1'
+              implementation('com.google.android.gms:play-services-mlkit-subject-segmentation:16.0.0-beta1') {
+                  exclude group: 'org.jetbrains.kotlin', module: 'kotlin-stdlib-jdk7'
+                  exclude group: 'org.jetbrains.kotlin', module: 'kotlin-stdlib-jdk8'
+              }
+          }
+
+          configurations.configureEach {
+              exclude group: 'org.jetbrains.kotlin', module: 'kotlin-stdlib-jdk7'
+              exclude group: 'org.jetbrains.kotlin', module: 'kotlin-stdlib-jdk8'
+              resolutionStrategy.force 'org.jetbrains.kotlin:kotlin-stdlib:1.8.22'
           }
           '''
 
