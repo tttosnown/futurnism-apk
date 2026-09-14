@@ -356,7 +356,19 @@ jobs:
                           Intent cameraIntent = null;
                           if (ContextCompat.checkSelfPermission(MainActivity.this, Manifest.permission.CAMERA)
                                   == PackageManager.PERMISSION_GRANTED) {
-                              cameraIntent = new Intent(android.provider.MediaStore.ACTION_IMAGE_CAPTURE);
+                              try {
+                                  File photoFile = File.createTempFile("future_camera_", ".jpg", getCacheDir());
+                                  pendingCameraUri = FileProvider.getUriForFile(
+                                          MainActivity.this,
+                                          getPackageName() + ".fileprovider",
+                                          photoFile
+                                  );
+                                  cameraIntent = new Intent(android.provider.MediaStore.ACTION_IMAGE_CAPTURE);
+                                  cameraIntent.putExtra(android.provider.MediaStore.EXTRA_OUTPUT, pendingCameraUri);
+                                  cameraIntent.addFlags(Intent.FLAG_GRANT_WRITE_URI_PERMISSION | Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                              } catch (Exception e) {
+                                  pendingCameraUri = null;
+                              }
                           }
           
                           Intent chooserIntent;
@@ -748,12 +760,21 @@ jobs:
                   if (requestCode == FILE_CHOOSER_REQUEST) {
                       if (filePathCallback == null) return;
                       Uri[] results = null;
-                      if (resultCode == RESULT_OK && data != null) {
-                          Uri uri = data.getData();
+                      if (resultCode == RESULT_OK) {
+                          // Camera launched with EXTRA_OUTPUT returns no data Intent on many phones.
+                          // Use the saved FileProvider URI in that case.
+                          Uri uri = (data != null && data.getData() != null) ? data.getData() : pendingCameraUri;
                           if (uri != null) results = new Uri[]{uri};
                       }
                       filePathCallback.onReceiveValue(results);
                       filePathCallback = null;
+                      if (resultCode != RESULT_OK && pendingCameraUri != null) {
+                          try {
+                              File f = new File(pendingCameraUri.getPath());
+                              if (f.exists()) f.delete();
+                          } catch (Exception ignored) {}
+                      }
+                      pendingCameraUri = null;
                       return;
                   }
                   if (requestCode == CREATE_FILE_REQUEST) {
@@ -807,8 +828,8 @@ jobs:
           from pathlib import Path
           p = Path("android-build/app/build.gradle")
           s = p.read_text()
-          s = s.replace("versionCode 23", "versionCode 24")
-          s = s.replace("versionName '19.17'", "versionName '19.19'")
+          s = s.replace("versionCode 23", "versionCode 25")
+          s = s.replace("versionName '19.17'", "versionName '19.19-camera-fix'")
           s += """
 
           dependencies {
