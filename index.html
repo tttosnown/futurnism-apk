@@ -448,10 +448,20 @@ header{
 .processing:before{content:"";width:10px;height:10px;border-radius:50%;border:2px solid rgba(56,85,107,.2);border-top-color:var(--palette-red);animation:spin .7s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
 
-/* 大型每周玻璃贴纸罐 */
+/* 大型每月玻璃贴纸罐 */
 .jar-card{background:rgba(242,239,224,.82);border:1px solid rgba(201,221,245,.9);padding:16px;overflow:hidden}
 .jar-toolbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
 .jar-week{font-size:16px;font-weight:650;color:var(--ink)}
+ .jar-mini-cal{margin:8px 0 14px;padding:10px 11px;border-radius:16px;background:rgba(249,217,145,.18);border:1px solid rgba(201,221,245,.65)}
+ .jar-mini-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:7px}
+ .jar-mini-title{font-size:13px;font-weight:650}
+ .jar-mini-head button{padding:4px 9px;border-radius:999px;background:rgba(201,221,245,.65);color:var(--ink);font-size:13px}
+ .jar-mini-week,.jar-mini-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:3px}
+ .jar-mini-week div{text-align:center;font-size:9px;opacity:.42;padding-bottom:3px}
+ .jar-mini-day{min-height:27px;border-radius:8px;background:rgba(242,239,224,.72);border:1px solid rgba(201,221,245,.45);font-size:10px;color:var(--ink)}
+ .jar-mini-day.muted{opacity:.22;background:transparent;border-color:transparent}
+ .jar-mini-day.selected{background:var(--palette-blue);font-weight:700}
+ .jar-mini-day.today{box-shadow:inset 0 0 0 1px var(--palette-red)}
 .jar-count{font-size:11px;opacity:.55}
 .jar-wrap{position:relative;width:100%;height:min(70vh,620px);min-height:430px;border-radius:42px 42px 48px 48px;background:linear-gradient(135deg,rgba(255,255,255,.42),rgba(201,221,245,.17) 42%,rgba(255,255,255,.28));border:2px solid rgba(255,255,255,.78);box-shadow:inset 0 0 0 1px rgba(56,85,107,.08),inset 0 18px 30px rgba(255,255,255,.3),0 16px 32px rgba(56,85,107,.1);overflow:hidden}
 .jar-neck{position:absolute;left:18%;right:18%;top:-5px;height:42px;border-radius:0 0 22px 22px;background:linear-gradient(90deg,rgba(255,255,255,.38),rgba(201,221,245,.28),rgba(255,255,255,.42));border:2px solid rgba(255,255,255,.75);border-top:0}
@@ -633,13 +643,13 @@ body.time-late{
  <section class="card jar-card">
   <div class="jar-toolbar">
    <div>
-    <div class="label">WEEKLY JAR</div>
+    <div class="label">MONTHLY JAR</div>
     <div class="jar-week" id="jarWeekTitle"></div>
    </div>
    <div class="jar-nav">
-    <button onclick="changeJarWeek(-1)">‹</button>
-    <button class="current" onclick="goCurrentJarWeek()">本周</button>
-    <button onclick="changeJarWeek(1)">›</button>
+    <button onclick="changeJarMonth(-1)">‹</button>
+    <button class="current" onclick="goCurrentJarMonth()">本周</button>
+    <button onclick="changeJarMonth(1)">›</button>
    </div>
   </div>
   <div class="jar-count" id="jarCount"></div>
@@ -899,7 +909,7 @@ let tempPhoto='';
 let tempOriginalPhoto='';
 let tempPhotoMode='original';
 let stickerProcessing=false;
-let jarWeekStart=null;
+let jarMonthStart=null;
 
 let lastToday='';
 
@@ -1674,52 +1684,59 @@ function deleteCurrent(){
 }
 
 
-/* 每周贴纸罐 */
-function mondayOf(d){const x=new Date(d);x.setHours(0,0,0,0);const day=(x.getDay()+6)%7;x.setDate(x.getDate()-day);return x;}
-function jarKeyDate(d){return todayISODate(mondayOf(d));}
-function jarRangeLabel(start){const end=new Date(start);end.setDate(end.getDate()+6);return fmt(todayISODate(start))+' — '+fmt(todayISODate(end));}
-function ensureJarWeek(){if(!jarWeekStart)jarWeekStart=mondayOf(new Date());}
+/* 每月贴纸罐 + 小年历 */
+function monthStart(d){const x=new Date(d);x.setHours(0,0,0,0);x.setDate(1);return x;}
+function jarMonthKey(d){return todayISODate(monthStart(d)).slice(0,7);}
+function jarMonthLabel(d){return new Date(d).getFullYear()+'年 '+(new Date(d).getMonth()+1)+'月';}
+function ensureJarMonth(){if(!jarMonthStart)jarMonthStart=monthStart(new Date());}
+function renderJarMiniCalendar(){
+ ensureJarMonth();
+ const title=document.getElementById('jarMiniTitle'),grid=document.getElementById('jarMiniCal');
+ if(!title||!grid)return;
+ title.textContent=jarMonthLabel(jarMonthStart);
+ grid.innerHTML='';
+ const y=jarMonthStart.getFullYear(),m=jarMonthStart.getMonth();
+ const first=(new Date(y,m,1).getDay()+6)%7;
+ const days=new Date(y,m+1,0).getDate();
+ const prevDays=new Date(y,m,0).getDate();
+ for(let i=0;i<42;i++){
+  const btn=document.createElement('button');btn.className='jar-mini-day';
+  const n=i-first+1; let yy=y,mm=m,dd=n;
+  if(n<1){dd=prevDays+n;mm=m-1;if(mm<0){mm=11;yy--;}}
+  else if(n>days){dd=n-days;mm=m+1;if(mm>11){mm=0;yy++;}}
+  const iso=yy+'-'+String(mm+1).padStart(2,'0')+'-'+String(dd).padStart(2,'0');
+  btn.textContent=dd;
+  if(mm!==m)btn.classList.add('muted');
+  if(iso===todayISO())btn.classList.add('today');
+  if(mm===m)btn.classList.add('selected');
+  btn.onclick=()=>{jarMonthStart=monthStart(new Date(yy,mm,dd));renderJar();};
+  grid.appendChild(btn);
+ }
+}
 function renderJar(){
- ensureJarWeek();
+ ensureJarMonth();
  const title=document.getElementById('jarWeekTitle'),count=document.getElementById('jarCount'),wrap=document.getElementById('jarWrap');
  if(!title||!count||!wrap)return;
- title.textContent=jarRangeLabel(jarWeekStart);
- const key=jarKeyDate(jarWeekStart),end=new Date(jarWeekStart);end.setDate(end.getDate()+6);
- const stickers=records.filter(r=>r.photo&&r.photoMode==='sticker'&&r.date>=key&&r.date<=todayISODate(end));
+ title.textContent=jarMonthLabel(jarMonthStart);
+ renderJarMiniCalendar();
+ const key=jarMonthKey(jarMonthStart);
+ const stickers=records.filter(r=>r.photo&&r.photoMode==='sticker'&&typeof r.date==='string'&&r.date.slice(0,7)===key);
  count.textContent=stickers.length+' 张贴纸';
  wrap.querySelectorAll('.jar-sticker,.jar-empty').forEach(x=>x.remove());
- if(!stickers.length){const e=document.createElement('div');e.className='jar-empty';e.innerHTML='这一周还没有贴纸<br>每天留下一张，它们会慢慢落进玻璃罐。';wrap.appendChild(e);return;}
+ if(!stickers.length){const e=document.createElement('div');e.className='jar-empty';e.innerHTML='这个月还没有贴纸<br>每天留下一张，它们会慢慢落进玻璃罐。';wrap.appendChild(e);return;}
  const w=wrap.clientWidth||340,h=wrap.clientHeight||520,pad=20;
  const density=Math.min(1,Math.sqrt(18/Math.max(1,stickers.length)));
- const maxW=Math.min(w*.40,145)*density;
- const maxH=Math.min(h*.21,110)*density;
- const placed=[];
+ const maxW=Math.min(w*.40,145)*density; const maxH=Math.min(h*.21,110)*density; const placed=[];
  stickers.forEach((r,index)=>{
-  const img=document.createElement('img');
-  img.className='jar-sticker';img.src=r.photo;img.alt='';
-  const bw=maxW*(.72+Math.random()*.24);
-  const bh=maxH*(.72+Math.random()*.24);
-  let x=pad,y=70,best=null;
-  for(let tries=0;tries<140;tries++){
-   const cx=pad+Math.random()*Math.max(1,w-bw-pad*2);
-   const cy=70+Math.random()*Math.max(1,h-bh-pad-70);
-   const gap=8;
-   const hit=placed.some(q=>cx<q.x+q.w+gap&&cx+bw+gap>q.x&&cy<q.y+q.h+gap&&cy+bh+gap>q.y);
-   if(!hit){best={x:cx,y:cy,w:bw,h:bh};break;}
-   best=best||{x:cx,y:cy,w:bw,h:bh};
-  }
-  placed.push(best);
-  img.style.width=bw+'px';img.style.height=bh+'px';
-  img.style.left=best.x+'px';img.style.top=best.y+'px';
-  const rot=(Math.random()*14-7).toFixed(2)+'deg';
-  img.style.setProperty('--r',rot);
-  img.style.animationDelay=(index*35)+'ms';
-  wrap.appendChild(img);
+  const img=document.createElement('img');img.className='jar-sticker';img.src=r.photo;img.alt='';
+  const bw=maxW*(.72+Math.random()*.24),bh=maxH*(.72+Math.random()*.24); let best=null;
+  for(let tries=0;tries<140;tries++){const cx=pad+Math.random()*Math.max(1,w-bw-pad*2),cy=70+Math.random()*Math.max(1,h-bh-pad-70),gap=8;const hit=placed.some(q=>cx<q.x+q.w+gap&&cx+bw+gap>q.x&&cy<q.y+q.h+gap&&cy+bh+gap>q.y);if(!hit){best={x:cx,y:cy,w:bw,h:bh};break;}best=best||{x:cx,y:cy,w:bw,h:bh};}
+  placed.push(best); img.style.width=bw+'px';img.style.height=bh+'px';img.style.left=best.x+'px';img.style.top=best.y+'px';
+  img.style.setProperty('--r',(Math.random()*14-7).toFixed(2)+'deg');img.style.animationDelay=(index*35)+'ms';wrap.appendChild(img);
  });
 }
-
-function changeJarWeek(delta){ensureJarWeek();jarWeekStart=new Date(jarWeekStart);jarWeekStart.setDate(jarWeekStart.getDate()+delta*7);renderJar();}
-function goCurrentJarWeek(){jarWeekStart=mondayOf(new Date());renderJar();}
+function changeJarMonth(delta){ensureJarMonth();jarMonthStart=new Date(jarMonthStart);jarMonthStart.setMonth(jarMonthStart.getMonth()+delta);jarMonthStart=monthStart(jarMonthStart);renderJar();}
+function goCurrentJarMonth(){jarMonthStart=monthStart(new Date());renderJar();}
 
 /* 设置 */
 
@@ -1952,7 +1969,7 @@ renderChance();
 
 renderCalendar();
 
-jarWeekStart=mondayOf(new Date());
+jarMonthStart=monthStart(new Date());
 renderJar();
 
 setTimeTheme();
@@ -1998,7 +2015,7 @@ setInterval(()=>{
   renderChance();
 
   renderCalendar();
-jarWeekStart=mondayOf(new Date());
+jarMonthStart=monthStart(new Date());
 renderJar();
 
  }
