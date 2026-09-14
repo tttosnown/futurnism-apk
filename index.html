@@ -15,6 +15,10 @@
 <style>
 *{box-sizing:border-box}
 :root{--palette-red:#b9210c;--palette-cream:#f2efe0;--palette-yellow:#f9d991;--palette-blue:#c9ddf5;--ink:#38556b;--ink-soft:#667789}
+html{
+ background:#f3f0f8;
+ transition:background 1.2s ease;
+}
 body{
  margin:0;
  background:#f3f0f8;
@@ -522,22 +526,27 @@ header{
 .jar-nav button.current{background:var(--palette-yellow)}
 /* 时间背景 */
 body.time-morning{
+ background-color:#f7fbfd;
  background:linear-gradient(135deg,#edf7fc 0%,#f7fbfd 50%,#eaf5fb 100%);
 }
 
 body.time-day{
+ background-color:#fffaf4;
  background:linear-gradient(135deg,#fff8ed 0%,#fffaf4 50%,#fff0dc 100%);
 }
 
 body.time-evening{
+ background-color:#fff8f8;
  background:linear-gradient(135deg,#fff1f3 0%,#fff8f8 50%,#fbecef 100%);
 }
 
 body.time-night{
+ background-color:#f8f4fb;
  background:linear-gradient(135deg,#f4eef9 0%,#f8f4fb 50%,#eee8f5 100%);
 }
 
 body.time-late{
+ background-color:#f7f7f7;
  background:linear-gradient(135deg,#f0f1f2 0%,#f7f7f7 50%,#e9eaec 100%);
 }
 
@@ -1108,6 +1117,13 @@ function setTimeTheme(){
   'time-night',
   'time-late'
  );
+
+ document.documentElement.style.backgroundColor =
+  h>=6&&h<10 ? '#f7fbfd'
+  :h>=10&&h<16 ? '#fffaf4'
+  :h>=16&&h<20 ? '#fff8f8'
+  :h>=20&&h<24 ? '#f8f4fb'
+  :'#f7f7f7';
 
  document.body.classList.add(
   h>=6&&h<10
