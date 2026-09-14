@@ -955,8 +955,78 @@ body.time-late{
 <script>
 
 const KEY='futurism-records-v2';
+const IDB_NAME='future-records-db';
+const IDB_STORE='records';
+let records=[];
+let recordsDbPromise=null;
 
-let records=JSON.parse(localStorage.getItem(KEY)||'[]');
+/* 记录持久化：保留 localStorage，同时用 IndexedDB 作为大备份的可靠存储。
+   这样导入带图片的 JSON 时，即使 localStorage 容量不足，退出 App 后记录也不会丢。 */
+function readLegacyRecords(){
+ try{
+  const raw=localStorage.getItem(KEY);
+  const data=raw?JSON.parse(raw):[];
+  return Array.isArray(data)?data:[];
+ }catch(e){return [];}
+}
+
+records=readLegacyRecords();
+
+function openRecordsDB(){
+ if(recordsDbPromise)return recordsDbPromise;
+ recordsDbPromise=new Promise((resolve,reject)=>{
+  if(!window.indexedDB){reject(new Error('IndexedDB unavailable'));return;}
+  const req=indexedDB.open(IDB_NAME,1);
+  req.onupgradeneeded=()=>{
+   const db=req.result;
+   if(!db.objectStoreNames.contains(IDB_STORE))db.createObjectStore(IDB_STORE);
+  };
+  req.onsuccess=()=>resolve(req.result);
+  req.onerror=()=>reject(req.error||new Error('IndexedDB open failed'));
+ });
+ return recordsDbPromise;
+}
+
+function idbReadRecords(){
+ return openRecordsDB().then(db=>new Promise((resolve,reject)=>{
+  const tx=db.transaction(IDB_STORE,'readonly');
+  const req=tx.objectStore(IDB_STORE).get('all');
+  req.onsuccess=()=>resolve(Array.isArray(req.result)?req.result:null);
+  req.onerror=()=>reject(req.error||new Error('IndexedDB read failed'));
+ }));
+}
+
+function idbWriteRecords(data){
+ return openRecordsDB().then(db=>new Promise((resolve,reject)=>{
+  const tx=db.transaction(IDB_STORE,'readwrite');
+  tx.objectStore(IDB_STORE).put(data,'all');
+  tx.oncomplete=()=>resolve();
+  tx.onerror=()=>reject(tx.error||new Error('IndexedDB write failed'));
+  tx.onabort=()=>reject(tx.error||new Error('IndexedDB write aborted'));
+ }));
+}
+
+function persist(){
+ /* 小数据继续写 localStorage，兼容原来的版本；容量不足时不要让导入流程失败。 */
+ try{
+  localStorage.setItem(KEY,JSON.stringify(records));
+ }catch(e){}
+ /* IndexedDB 可保存明显更大的带图片记录。 */
+ return idbWriteRecords(records).catch(()=>{});
+}
+
+async function loadPersistentRecords(){
+ try{
+  const saved=await idbReadRecords();
+  if(Array.isArray(saved)){
+   records=saved;
+   /* 尽量同步一份回 localStorage，失败也不影响 IndexedDB。 */
+   try{localStorage.setItem(KEY,JSON.stringify(records));}catch(e){}
+  }else if(records.length){
+   await idbWriteRecords(records);
+  }
+ }catch(e){}
+}
 
 let currentMonth=new Date();
 currentMonth.setDate(1);
@@ -971,10 +1041,6 @@ let jarMonthStart=null;
 
 let lastToday='';
 
-
-function persist(){
- localStorage.setItem(KEY,JSON.stringify(records));
-}
 
 function refreshVisiblePage(){
  requestAnimationFrame(()=>{
@@ -2057,16 +2123,17 @@ async function installApp(){
 
 /* 初始化 */
 
-renderChance();
+async function initApp(){
+ await loadPersistentRecords();
+ renderChance();
+ renderCalendar();
+ jarMonthStart=monthStart(new Date());
+ renderJar();
+ setTimeTheme();
+ lastToday=todayISO();
+}
 
-renderCalendar();
-
-jarMonthStart=monthStart(new Date());
-renderJar();
-
-setTimeTheme();
-
-lastToday=todayISO();
+initApp();
 
 
 /* 自动跨午夜更新 */
