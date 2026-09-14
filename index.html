@@ -455,13 +455,13 @@ header{
  .jar-mini-cal{margin:8px 0 14px;padding:10px 11px;border-radius:16px;background:rgba(249,217,145,.18);border:1px solid rgba(201,221,245,.65)}
  .jar-mini-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:7px}
  .jar-mini-title{font-size:13px;font-weight:650}
- .jar-mini-head button{padding:4px 9px;border-radius:999px;background:rgba(201,221,245,.65);color:var(--ink);font-size:13px}
+ .jar-mini-head button{padding:4px 9px;border-radius:999px;background:rgba(201,221,245,.65);color:var(--ink);font-size:13px}.jar-picker-btn{padding:8px 10px!important;font-size:14px!important;min-width:36px}
  .jar-mini-week,.jar-mini-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:3px}
  .jar-mini-week div{text-align:center;font-size:9px;opacity:.42;padding-bottom:3px}
  .jar-mini-day{min-height:27px;border-radius:8px;background:rgba(242,239,224,.72);border:1px solid rgba(201,221,245,.45);font-size:10px;color:var(--ink)}
  .jar-mini-day.muted{opacity:.22;background:transparent;border-color:transparent}
  .jar-mini-day.selected{background:var(--palette-blue);font-weight:700}
- .jar-mini-day.today{box-shadow:inset 0 0 0 1px var(--palette-red)}
+ .jar-mini-day.today{box-shadow:inset 0 0 0 1px var(--palette-red)}.jar-mini-cal[hidden]{display:none}.jar-mini-cal{box-shadow:0 8px 18px rgba(56,85,107,.06)}
 .jar-count{font-size:11px;opacity:.55}
 .jar-wrap{position:relative;width:100%;height:min(70vh,620px);min-height:430px;border-radius:42px 42px 48px 48px;background:linear-gradient(135deg,rgba(255,255,255,.42),rgba(201,221,245,.17) 42%,rgba(255,255,255,.28));border:2px solid rgba(255,255,255,.78);box-shadow:inset 0 0 0 1px rgba(56,85,107,.08),inset 0 18px 30px rgba(255,255,255,.3),0 16px 32px rgba(56,85,107,.1);overflow:hidden}
 .jar-neck{position:absolute;left:18%;right:18%;top:-5px;height:42px;border-radius:0 0 22px 22px;background:linear-gradient(90deg,rgba(255,255,255,.38),rgba(201,221,245,.28),rgba(255,255,255,.42));border:2px solid rgba(255,255,255,.75);border-top:0}
@@ -648,9 +648,21 @@ body.time-late{
    </div>
    <div class="jar-nav">
     <button onclick="changeJarMonth(-1)">‹</button>
-    <button class="current" onclick="goCurrentJarMonth()">本周</button>
+    <button class="current" onclick="goCurrentJarMonth()">本月</button>
+    <button class="jar-picker-btn" onclick="toggleJarMiniCalendar()" aria-label="选择月份">▦</button>
     <button onclick="changeJarMonth(1)">›</button>
    </div>
+  </div>
+  <div class="jar-mini-cal" id="jarMiniCalPanel" hidden>
+   <div class="jar-mini-head">
+    <button onclick="changeJarMiniMonth(-1)" aria-label="上个月">‹</button>
+    <div class="jar-mini-title" id="jarMiniTitle"></div>
+    <button onclick="changeJarMiniMonth(1)" aria-label="下个月">›</button>
+   </div>
+   <div class="jar-mini-week">
+    <div>一</div><div>二</div><div>三</div><div>四</div><div>五</div><div>六</div><div>日</div>
+   </div>
+   <div class="jar-mini-grid" id="jarMiniCal"></div>
   </div>
   <div class="jar-count" id="jarCount"></div>
   <div class="jar-wrap" id="jarWrap">
@@ -1709,9 +1721,24 @@ function renderJarMiniCalendar(){
   if(mm!==m)btn.classList.add('muted');
   if(iso===todayISO())btn.classList.add('today');
   if(mm===m)btn.classList.add('selected');
-  btn.onclick=()=>{jarMonthStart=monthStart(new Date(yy,mm,dd));renderJar();};
+  btn.onclick=()=>{jarMonthStart=monthStart(new Date(yy,mm,dd));renderJar();const panel=document.getElementById('jarMiniCalPanel');if(panel)panel.hidden=true;};
   grid.appendChild(btn);
  }
+}
+function toggleJarMiniCalendar(){
+ const panel=document.getElementById('jarMiniCalPanel');
+ if(!panel)return;
+ panel.hidden=!panel.hidden;
+ if(!panel.hidden)renderJarMiniCalendar();
+}
+function changeJarMiniMonth(delta){
+ ensureJarMonth();
+ jarMonthStart=new Date(jarMonthStart);
+ jarMonthStart.setMonth(jarMonthStart.getMonth()+delta);
+ jarMonthStart=monthStart(jarMonthStart);
+ renderJar();
+ const panel=document.getElementById('jarMiniCalPanel');
+ if(panel)panel.hidden=false;
 }
 function renderJar(){
  ensureJarMonth();
