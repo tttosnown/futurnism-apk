@@ -23,7 +23,7 @@ body{
  transition:background 1.2s ease;
 }
 button,input,textarea{font:inherit}
-button{border:0;background:none;color:inherit;cursor:pointer}
+button{border:0;background:none;color:inherit;cursor:pointer;touch-action:manipulation}
 button:focus{outline:none}
 button,input,textarea{ -webkit-tap-highlight-color:transparent }
 
@@ -183,6 +183,48 @@ header{
 .month{
  font-size:22px;
  font-weight:600;
+}
+
+.month-center{
+ display:flex;
+ align-items:center;
+ justify-content:center;
+ gap:7px;
+ min-width:0;
+}
+
+.month-picker-btn{
+ width:34px;
+ height:34px;
+ border-radius:50%;
+ background:var(--palette-yellow);
+ border:1px solid rgba(56,85,107,.10);
+ font-size:16px;
+ display:inline-flex;
+ align-items:center;
+ justify-content:center;
+ transition:transform .12s ease,filter .12s ease;
+ touch-action:manipulation;
+}
+
+.month-picker-btn:active,
+.arrow:active,
+.jar-nav button:active,
+.jar-mini-head button:active,
+.jar-mini-day:active,
+.nav:active,
+.small-actions button:active,
+.iconbtn:active,
+.pill:active{
+ transform:scale(.95);
+}
+
+#calendarMonthPicker{
+ position:absolute;
+ width:1px;
+ height:1px;
+ opacity:0;
+ pointer-events:none;
 }
 
 .arrow{
@@ -620,9 +662,13 @@ body.time-late{
 <main id="calendar" class="page">
 
  <div class="monthbar">
-  <button class="arrow" onclick="changeMonth(-1)">‹</button>
-  <div class="month" id="monthTitle"></div>
-  <button class="arrow" onclick="changeMonth(1)">›</button>
+  <button class="arrow" onclick="changeMonth(-1)" aria-label="上个月">‹</button>
+  <div class="month-center">
+   <div class="month" id="monthTitle"></div>
+   <button class="month-picker-btn" onclick="openCalendarMonthPicker()" aria-label="选择月份" title="选择月份">▦</button>
+   <input id="calendarMonthPicker" type="month" onchange="selectCalendarMonth(this.value)" aria-label="选择月份">
+  </div>
+  <button class="arrow" onclick="changeMonth(1)" aria-label="下个月">›</button>
  </div>
 
  <div class="week">
@@ -928,7 +974,16 @@ let lastToday='';
 
 function persist(){
  localStorage.setItem(KEY,JSON.stringify(records));
- if(document.getElementById('jar')?.classList.contains('active')) renderJar();
+}
+
+function refreshVisiblePage(){
+ requestAnimationFrame(()=>{
+  const active=document.querySelector('.page.active');
+  if(!active)return;
+  if(active.id==='chance')renderChance();
+  else if(active.id==='calendar')renderCalendar();
+  else if(active.id==='jar')renderJar();
+ });
 }
 
 
@@ -1074,31 +1129,28 @@ function showPage(id){
   .querySelectorAll('.page')
   .forEach(x=>x.classList.remove('active'));
 
- document
-  .getElementById(id)
-  .classList.add('active');
+ const page=document.getElementById(id);
+ if(!page)return;
+ page.classList.add('active');
 
  document
   .querySelectorAll('.nav')
   .forEach(x=>x.classList.remove('active'));
 
- document
-  .getElementById(
-   id==='chance'
-    ?'navChance'
-    :id==='calendar'
-      ?'navCalendar'
-      :'navJar'
-  )
-  .classList.add('active');
+ const nav=document.getElementById(
+  id==='chance'
+   ?'navChance'
+   :id==='calendar'
+    ?'navCalendar'
+    :'navJar'
+ );
+ if(nav)nav.classList.add('active');
 
- if(id==='calendar'){
-  renderCalendar();
- }else if(id==='jar'){
-  renderJar();
- }else{
-  renderChance();
- }
+ requestAnimationFrame(()=>{
+  if(id==='calendar')renderCalendar();
+  else if(id==='jar')renderJar();
+  else renderChance();
+ });
 
 }
 
@@ -1264,6 +1316,26 @@ function changeMonth(n){
 
  renderCalendar();
 
+}
+
+function openCalendarMonthPicker(){
+ const input=document.getElementById('calendarMonthPicker');
+ if(!input)return;
+ input.value=currentMonth.getFullYear()+'-'+String(currentMonth.getMonth()+1).padStart(2,'0');
+ try{
+  if(typeof input.showPicker==='function')input.showPicker();
+  else input.click();
+ }catch(e){input.click();}
+}
+
+function selectCalendarMonth(value){
+ if(!value)return;
+ const parts=value.split('-');
+ if(parts.length!==2)return;
+ const y=Number(parts[0]),m=Number(parts[1])-1;
+ if(!Number.isFinite(y)||!Number.isFinite(m))return;
+ currentMonth=new Date(y,m,1);
+ renderCalendar();
 }
 
 
@@ -1545,9 +1617,7 @@ function saveEditor(){
 
  closeEditor();
 
- renderChance();
-
- renderCalendar();
+ refreshVisiblePage();
 
 }
 
@@ -1590,9 +1660,7 @@ function saveToday(){
  currentMonth=new Date();
  currentMonth.setDate(1);
 
- renderChance();
-
- renderCalendar();
+ refreshVisiblePage();
 
 }
 
@@ -1649,8 +1717,7 @@ function deleteRecordFromDay(id){
  records=records.filter(x=>x.id!==id);
  persist();
  closeViewer();
- renderChance();
- renderCalendar();
+ refreshVisiblePage();
 }
 
 function editCurrent(){
@@ -1689,9 +1756,7 @@ function deleteCurrent(){
 
  closeViewer();
 
- renderChance();
-
- renderCalendar();
+ refreshVisiblePage();
 
 }
 
