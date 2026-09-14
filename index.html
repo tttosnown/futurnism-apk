@@ -290,6 +290,12 @@ header{
  opacity:.72;
 }
 
+.thumb.sticker-thumb{
+ object-fit:contain;
+ padding:8px;
+ opacity:1;
+}
+
 .day.hasphoto .daynum{
  background:#fff;
  border-radius:8px;
@@ -571,6 +577,13 @@ body.time-late{
 
 .photo-only{
  cursor:zoom-in;
+}
+
+.photo.sticker-photo,
+.media-layout .photo.sticker-photo{
+ object-fit:contain;
+ max-height:320px;
+ background:rgba(201,221,245,.10);
 }
 
 /* 图片放大层 */
@@ -1136,7 +1149,7 @@ function mediaHtml(r){
   :'';
 
  const photo=r.photo
-  ?'<img class="photo" src="'+r.photo+'" onclick="openLightbox(this.src,event)" alt="">'
+  ?'<img class="photo '+(r.photoMode==='sticker'?'sticker-photo':'')+'" src="'+r.photo+'" onclick="openLightbox(this.src,event)" alt="">'
   :'';
 
  if(r.photo&&r.text){
@@ -1359,7 +1372,7 @@ function renderCalendar(){
    '<button class="day '+(r?'hasphoto':'')+'"'
    +' onclick="openDay(\''+iso+'\')">'
    +(r
-    ?'<img class="thumb" src="'+r.photo+'">'
+    ?'<img class="thumb '+(r.photoMode==='sticker'?'sticker-thumb':'')+'" src="'+r.photo+'">'
     :'')
    +'<div class="daynum">'+n+'</div>'
    +(rs.length
@@ -1882,15 +1895,50 @@ function renderJar(){
  count.textContent=stickers.length+' 张贴纸';
  wrap.querySelectorAll('.jar-sticker,.jar-empty').forEach(x=>x.remove());
  if(!stickers.length){const e=document.createElement('div');e.className='jar-empty';e.innerHTML='这个月还没有贴纸<br>每天留下一张，它们会慢慢落进玻璃罐。';wrap.appendChild(e);return;}
- const w=wrap.clientWidth||340,h=wrap.clientHeight||520,pad=20;
- const density=Math.min(1,Math.sqrt(18/Math.max(1,stickers.length)));
- const maxW=Math.min(w*.40,145)*density; const maxH=Math.min(h*.21,110)*density; const placed=[];
+
+ /* 随机散落，但严格禁止贴纸互相遮挡；数量越多，贴纸整体越小。 */
+ const w=wrap.clientWidth||340,h=wrap.clientHeight||520;
+ const pad=12,topPad=52,bottomPad=12;
+ const usableW=Math.max(1,w-pad*2),usableH=Math.max(1,h-topPad-bottomPad),n=stickers.length;
+ const rand=(i,t,seed)=>{const v=Math.sin((i+1)*127.1+t*311.7+seed*19.7)*43758.5453;return v-Math.floor(v)};
+ const baseScale=Math.min(1,Math.sqrt(16/Math.max(1,n)));
+ let placedResult=null;
+
+ for(let scale=baseScale;scale>=0.22;scale*=.90){
+  const items=stickers.map((r,i)=>{
+   const aspect=Math.max(.55,Math.min(1.8,(Number(r.stickerWidth)>0&&Number(r.stickerHeight)>0)?Number(r.stickerWidth)/Number(r.stickerHeight):1));
+   const unit=Math.sqrt(usableW*usableH/Math.max(1,n)*.62);
+   return {index:i,w:Math.max(26,Math.min(145,unit*aspect)*scale),h:Math.max(24,Math.min(115,unit/Math.max(.7,aspect))*scale)};
+  }).sort((a,b)=>(b.w*b.h)-(a.w*a.h));
+  const placed=[]; let ok=true;
+  for(const item of items){
+   let found=null;
+   for(let t=0;t<900;t++){
+    const x=pad+rand(item.index,t,1)*Math.max(0,usableW-item.w);
+    const y=topPad+rand(item.index,t,2)*Math.max(0,usableH-item.h);
+    const hit=placed.some(q=>x<q.x+q.w+1&&x+item.w+1>q.x&&y<q.y+q.h+1&&y+item.h+1>q.y);
+    if(!hit){found={x,y,w:item.w,h:item.h,index:item.index};break;}
+   }
+   if(!found){ok=false;break;}
+   placed.push(found);
+  }
+  if(ok&&placed.length===n){placedResult=placed;break;}
+ }
+
+ /* 极端数量时，继续缩小并使用安全分区；分区之间绝不重叠。 */
+ if(!placedResult){
+  const cols=Math.max(1,Math.ceil(Math.sqrt(n*usableW/usableH)));
+  const rows=Math.ceil(n/cols),cw=usableW/cols,ch=usableH/rows;
+  placedResult=stickers.map((r,i)=>({index:i,x:pad+(i%cols)*cw+1,y:topPad+Math.floor(i/cols)*ch+1,w:Math.max(22,cw-2),h:Math.max(22,ch-2)}));
+ }
+
+ const positions=new Array(n);placedResult.forEach(p=>positions[p.index]=p);
  stickers.forEach((r,index)=>{
+  const pos=positions[index];
   const img=document.createElement('img');img.className='jar-sticker';img.src=r.photo;img.alt='';
-  const bw=maxW*(.72+Math.random()*.24),bh=maxH*(.72+Math.random()*.24); let best=null;
-  for(let tries=0;tries<140;tries++){const cx=pad+Math.random()*Math.max(1,w-bw-pad*2),cy=70+Math.random()*Math.max(1,h-bh-pad-70),gap=8;const hit=placed.some(q=>cx<q.x+q.w+gap&&cx+bw+gap>q.x&&cy<q.y+q.h+gap&&cy+bh+gap>q.y);if(!hit){best={x:cx,y:cy,w:bw,h:bh};break;}best=best||{x:cx,y:cy,w:bw,h:bh};}
-  placed.push(best); img.style.width=bw+'px';img.style.height=bh+'px';img.style.left=best.x+'px';img.style.top=best.y+'px';
-  img.style.setProperty('--r',(Math.random()*14-7).toFixed(2)+'deg');img.style.animationDelay=(index*35)+'ms';wrap.appendChild(img);
+  img.style.width=pos.w+'px';img.style.height=pos.h+'px';img.style.left=pos.x+'px';img.style.top=pos.y+'px';
+  img.style.setProperty('--r',(Math.sin((index+1)*8.73)*5).toFixed(2)+'deg');img.style.animationDelay=(index*35)+'ms';
+  wrap.appendChild(img);
  });
 }
 function changeJarMonth(delta){ensureJarMonth();jarMonthStart=new Date(jarMonthStart);jarMonthStart.setMonth(jarMonthStart.getMonth()+delta);jarMonthStart=monthStart(jarMonthStart);renderJar();}
